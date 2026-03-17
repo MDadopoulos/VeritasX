@@ -114,26 +114,66 @@
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Every v1 requirement mapped to exactly one phase. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENV-01 through ENV-06 | Phase 1 | Pending |
-| RET-01 through RET-06 | Phase 1 | Pending |
-| EXT-01 through EXT-04 | Phase 2 | Pending |
-| CAL-01 through CAL-07 | Phase 2 | Pending |
-| AGT-01 through AGT-04 | Phase 3 | Pending |
-| SCR-01 through SCR-03 | Phase 3 | Pending |
-| VER-01 through VER-06 | Phase 4 | Pending |
-| HTTP-01 through HTTP-04 | Phase 5 | Pending |
-| MFS-01 through MFS-02 | Phase 6 | Pending |
-| TST-01 through TST-06 | Spans phases 1–6 | Pending |
+| ENV-01 | Phase 1 | Pending |
+| ENV-02 | Phase 1 | Pending |
+| ENV-03 | Phase 1 | Pending |
+| ENV-04 | Phase 1 | Pending |
+| ENV-05 | Phase 1 | Pending |
+| ENV-06 | Phase 1 | Pending |
+| RET-01 | Phase 1 | Pending |
+| RET-02 | Phase 1 | Pending |
+| RET-03 | Phase 1 | Pending |
+| RET-04 | Phase 1 | Pending |
+| RET-05 | Phase 1 | Pending |
+| RET-06 | Phase 1 | Pending |
+| TST-01 | Phase 1 | Pending |
+| TST-02 | Phase 1 | Pending |
+| EXT-01 | Phase 2 | Pending |
+| EXT-02 | Phase 2 | Pending |
+| EXT-03 | Phase 2 | Pending |
+| EXT-04 | Phase 2 | Pending |
+| CAL-01 | Phase 2 | Pending |
+| CAL-02 | Phase 2 | Pending |
+| CAL-03 | Phase 2 | Pending |
+| CAL-04 | Phase 2 | Pending |
+| CAL-05 | Phase 2 | Pending |
+| CAL-06 | Phase 2 | Pending |
+| TST-03 | Phase 2 | Pending |
+| TST-04 | Phase 2 | Pending |
+| AGT-01 | Phase 3 | Pending |
+| AGT-02 | Phase 3 | Pending |
+| AGT-03 | Phase 3 | Pending |
+| AGT-04 | Phase 3 | Pending |
+| SCR-01 | Phase 3 | Pending |
+| SCR-02 | Phase 3 | Pending |
+| SCR-03 | Phase 3 | Pending |
+| VER-01 | Phase 4 | Pending |
+| VER-02 | Phase 4 | Pending |
+| VER-03 | Phase 4 | Pending |
+| VER-04 | Phase 4 | Pending |
+| VER-05 | Phase 4 | Pending |
+| VER-06 | Phase 4 | Pending |
+| HTTP-01 | Phase 5 | Pending |
+| HTTP-02 | Phase 5 | Pending |
+| HTTP-03 | Phase 5 | Pending |
+| HTTP-04 | Phase 5 | Pending |
+| TST-05 | Phase 5 | Pending |
+| TST-06 | Phase 5 | Pending |
+| CAL-07 | Phase 6 | Pending |
+| MFS-01 | Phase 6 | Pending |
+| MFS-02 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 44 total
 - Mapped to phases: 44
-- Unmapped: 0 ✓
+- Unmapped: 0 (100% coverage)
+
+**Note on CAL-07:** The basic named operations (pct_change, sum_values) are already delivered in Phase 2 via CAL-02 and CAL-03. CAL-07 covers the advanced statistical formula library (CAGR, OLS, Box-Cox, Theil, Zipf, KL divergence, VaR, exponential smoothing) which is needed only for top-difficulty questions and is assigned to Phase 6.
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 — traceability updated after roadmap creation*
