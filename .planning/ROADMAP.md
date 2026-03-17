@@ -33,12 +33,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. `route_files("FY 1940 defense expenditures")` returns absolute paths to the October 1939 – September 1940 bulletin files and no hallucinated paths
   4. `search_in_file(path, "defense expenditures 1940")` returns the top-5 ranked 20-line spans covering the correct table rows, with the regex fallback activating on a numeric-only query
   5. Startup corpus manifest check logs zero missing files (or logs a specific warning for each missing file rather than silently succeeding)
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 01-01: Environment setup — `requirements.txt`, Vertex AI credential wiring, model adapter layer, corpus manifest check
-- [ ] 01-02: File router (`route_files`) — year/FY extraction, fiscal-to-calendar mapping, path validation, unit tests
-- [ ] 01-03: BM25 in-file search (`search_in_file`) — span indexing with table-boundary preservation, query normalization, regex fallback, unit tests
+- [ ] 01-01-PLAN.md — Environment setup: requirements.txt, Vertex AI credential wiring, model adapter factory, corpus manifest check
+- [ ] 01-02-PLAN.md — File router (route_files): year/FY extraction, fiscal-to-calendar mapping, path validation, unit tests
+- [ ] 01-03-PLAN.md — BM25 in-file search (search_in_file): span indexing with table-boundary preservation, query normalization, regex fallback, unit tests
 
 ### Phase 2: Extraction + Calculation Core
 **Goal**: The arithmetic pipeline produces exact, correctly-formatted answers from raw corpus text with no float rounding errors and no unit confusion
@@ -127,11 +127,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Environment + Retrieval Foundation | 0/3 | Not started | - |
+| 1. Environment + Retrieval Foundation | 0/3 | Planned | - |
 | 2. Extraction + Calculation Core | 0/4 | Not started | - |
 | 3. Agent Loop + Scratch Space | 0/3 | Not started | - |
 | 4. Verifier Subagent + Reliability | 0/3 | Not started | - |
@@ -140,4 +140,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-17 after initial creation*
+*Last updated: 2026-03-18 after Phase 1 planning*
