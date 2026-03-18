@@ -1,0 +1,131 @@
+{
+  "categories": {
+    "A_plain_integer": {
+      "rule": "No commas, no decimal -- output str(int(val))",
+      "examples": [
+        {"raw": "507", "expected": "507"},
+        {"raw": "73", "expected": "73"},
+        {"raw": "-1299", "expected": "-1299"},
+        {"raw": "935851121560", "expected": "935851121560"},
+        {"raw": "-11", "expected": "-11"},
+        {"raw": "-75", "expected": "-75"},
+        {"raw": "254689000", "expected": "254689000"},
+        {"raw": "92000000", "expected": "92000000"}
+      ]
+    },
+    "B_integer_comma": {
+      "rule": "Comma thousands separator, no decimal",
+      "examples": [
+        {"raw": "2,602", "expected": "2,602"},
+        {"raw": "44,463", "expected": "44,463"},
+        {"raw": "103,375", "expected": "103,375"},
+        {"raw": "6,244", "expected": "6,244"},
+        {"raw": "907,654", "expected": "907,654"}
+      ]
+    },
+    "C_decimal_2dp": {
+      "rule": "Exactly 2 decimal places, trailing zeros preserved",
+      "examples": [
+        {"raw": "39482.03", "expected": "39482.03"},
+        {"raw": "11.60", "expected": "11.60"},
+        {"raw": "678077.00", "expected": "678077.00"},
+        {"raw": "22.80", "expected": "22.80"},
+        {"raw": "57.50", "expected": "57.50"},
+        {"raw": "7.60", "expected": "7.60"}
+      ]
+    },
+    "D_decimal_other": {
+      "rule": "Variable decimal places, preserve as-is",
+      "examples": [
+        {"raw": "32.703", "expected": "32.703"},
+        {"raw": "0.88525", "expected": "0.88525"},
+        {"raw": "0.00262", "expected": "0.00262"},
+        {"raw": "0.0", "expected": "0.0"},
+        {"raw": "1.600", "expected": "1.600"},
+        {"raw": "3.9970", "expected": "3.9970"},
+        {"raw": "0.900544", "expected": "0.900544"},
+        {"raw": "-0.0158", "expected": "-0.0158"},
+        {"raw": "-0.063", "expected": "-0.063"},
+        {"raw": "1022031.67", "expected": "1022031.67"},
+        {"raw": "16808.2147", "expected": "16808.2147"}
+      ]
+    },
+    "E_pct_2dp": {
+      "rule": "Preserve decimal places from raw; % suffix",
+      "examples": [
+        {"raw": "1608.80%", "expected": "1608.80%"},
+        {"raw": "9.89%", "expected": "9.89%"},
+        {"raw": "-18.51%", "expected": "-18.51%"},
+        {"raw": "13.009%", "expected": "13.009%"},
+        {"raw": "9.987%", "expected": "9.987%"},
+        {"raw": "108.01%", "expected": "108.01%"},
+        {"raw": "11.73%", "expected": "11.73%"},
+        {"raw": "14.04%", "expected": "14.04%"},
+        {"raw": "19.96%", "expected": "19.96%"},
+        {"raw": "2.23%", "expected": "2.23%"},
+        {"raw": "4.61%", "expected": "4.61%"},
+        {"raw": "6.16%", "expected": "6.16%"},
+        {"raw": "9.69%", "expected": "9.69%"}
+      ]
+    },
+    "F_pct_integer": {
+      "rule": "Integer percentage with % suffix",
+      "examples": [
+        {"raw": "69%", "expected": "69%"},
+        {"raw": "3%", "expected": "3%"}
+      ]
+    },
+    "G_list_answer": {
+      "rule": "Pass-through",
+      "examples": [
+        {"raw": "[0.096, -184.143]", "expected": "[0.096, -184.143]"},
+        {"raw": "[-0.153, 0.847, -1.162]", "expected": "[-0.153, 0.847, -1.162]"},
+        {"raw": "[0.012, surplus]", "expected": "[0.012, surplus]"},
+        {"raw": "[2.59%, 2.34%, Decreased]", "expected": "[2.59%, 2.34%, Decreased]"},
+        {"raw": "[1444, 3174]", "expected": "[1444, 3174]"}
+      ]
+    },
+    "H_has_unit_word": {
+      "rule": "Pass-through -- unit word is part of answer",
+      "examples": [
+        {"raw": "36080 million", "expected": "36080 million"},
+        {"raw": "997.3 billion", "expected": "997.3 billion"},
+        {"raw": "-1,667.86 millions", "expected": "-1,667.86 millions"},
+        {"raw": "1169.41 million", "expected": "1169.41 million"},
+        {"raw": "9732.50 million", "expected": "9732.50 million"},
+        {"raw": "2760.44 millions", "expected": "2760.44 millions"},
+        {"raw": "93,349 million", "expected": "93,349 million"}
+      ]
+    },
+    "I_dollar": {
+      "rule": "Pass-through -- dollar sign is part of answer",
+      "examples": [
+        {"raw": "$37,921,314", "expected": "$37,921,314"},
+        {"raw": "$2,760.44", "expected": "$2,760.44"},
+        {"raw": "$140.9 Billion", "expected": "$140.9 Billion"},
+        {"raw": "$23,918,635", "expected": "$23,918,635"}
+      ]
+    },
+    "J_comma_decimal": {
+      "rule": "Comma + decimal -- preserve as-is",
+      "examples": [
+        {"raw": "57,615.04", "expected": "57,615.04"}
+      ]
+    },
+    "K_date": {
+      "rule": "Pass-through -- non-numeric",
+      "examples": [
+        {"raw": "March 3, 1977", "expected": "March 3, 1977"},
+        {"raw": "August 1986", "expected": "August 1986"}
+      ]
+    }
+  },
+  "edge_cases": [
+    {"raw": "\u2212507", "expected": "-507", "note": "Unicode minus to ASCII - plain integer"},
+    {"raw": "\u2212156.11", "expected": "-156.11", "note": "Unicode minus to ASCII - decimal"},
+    {"raw": "\u22123.524", "expected": "-3.524", "note": "Unicode minus to ASCII - decimal 3dp"},
+    {"raw": "  507  ", "expected": "507", "note": "Whitespace stripping"},
+    {"raw": "  11.60  ", "expected": "11.60", "note": "Whitespace stripping decimal trailing zeros"},
+    {"raw": "$ 682,397.00 million", "expected": "$ 682,397.00 million", "note": "Pro-only dollar+unit format (starts with $)"}
+  ]
+}
