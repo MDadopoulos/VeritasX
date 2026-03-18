@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 2 of 6 (Extraction + Calculation Core)
-Plan: 3 of N in current phase
-Status: Phase 2 plan 01 complete (retroactively) — extract_table_block + classify_table_rows with 64 tests pass
-Last activity: 2026-03-18 — 02-01 extraction tools (extract_table_block, classify_table_rows) executed and committed
+Plan: 4 of N in current phase (03 complete)
+Status: Phase 2 plan 03 complete — normalize_answer + format_survey fixture + 128 tests pass; 361 full suite pass
+Last activity: 2026-03-18 — 02-03 normalize_answer (format-exact answer normalizer) executed and committed
 
 Progress: [███░░░░░░░] 28%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive)
+- Total plans completed: 7 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03)
 - Total execution time: 3 sessions
 
 **By Phase:**
@@ -27,7 +27,7 @@ Progress: [███░░░░░░░] 28%
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 1: Environment + Retrieval Foundation | 3/3 | Complete |
-| 2: Extraction + Calculation Core | 2/? | In progress (01 and 02 done, 03+ pending) |
+| 2: Extraction + Calculation Core | 3/? | In progress (01, 02, 03 done; 04+ pending) |
 
 **Execution Metrics:**
 
@@ -35,6 +35,7 @@ Progress: [███░░░░░░░] 28%
 |------|----------|-------|-------|
 | Phase 02-extraction-calculation-core P01 | 45min | 2 tasks | 6 files |
 | Phase 02-extraction-calculation-core P02 | 35min | 2 tasks | 2 files |
+| Phase 02-extraction-calculation-core P03 | 25min | 2 tasks | 4 files |
 
 *Updated after each plan completion*
 
@@ -53,6 +54,8 @@ Recent decisions affecting current work:
 - [Phase 02-01]: Aggregate detection applied first (higher specificity) — 1940 Total, Cal. yr, cumulative -> aggregate bucket, not month
 - [Phase 02-01]: parse_cell_value is module-level in classify_table_rows.py — importable by Phase 3 calculator
 - [Phase 02-01]: pytest.ini: -p no:anyio etc. needed to suppress Anaconda entrypoint loading errors in this venv
+- [Phase 02-extraction-calculation-core]: normalize_answer: pass-through design — 8-step decision tree identifies format type, returns cleaned string unchanged; benchmark format IS expected format
+- [Phase 02-extraction-calculation-core]: format_survey.json as living fixture: parametrized tests load it — adding examples automatically adds tests; verified against 258 unique answers from both CSVs
 
 ### Pending Todos
 
@@ -67,6 +70,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 02-extraction-calculation-core 02-01-PLAN.md — extract_table_block + classify_table_rows, 64 tests pass.
-Next: Continue Phase 2 — plan 02-03 (normalize_answer) or 02-04 depending on roadmap.
+Stopped at: Completed 02-extraction-calculation-core 02-03-PLAN.md — normalize_answer + 128 tests pass, 361 full suite pass.
+Next: Continue Phase 2 — plan 02-04 or next plan per roadmap.
 Resume file: None
