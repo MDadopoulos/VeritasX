@@ -10,29 +10,30 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 2 of 6 (Extraction + Calculation Core)
-Plan: 2 of N in current phase
-Status: Phase 2 plan 02 complete — calculator module with 59 passing tests
-Last activity: 2026-03-18 — 02-02 calculator (calculate, pct_change, sum_values) executed and committed
+Plan: 3 of N in current phase
+Status: Phase 2 plan 01 complete (retroactively) — extract_table_block + classify_table_rows with 64 tests pass
+Last activity: 2026-03-18 — 02-01 extraction tools (extract_table_block, classify_table_rows) executed and committed
 
-Progress: [███░░░░░░░] 25%
+Progress: [███░░░░░░░] 28%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02)
-- Total execution time: 2 sessions
+- Total plans completed: 6 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive)
+- Total execution time: 3 sessions
 
 **By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 1: Environment + Retrieval Foundation | 3/3 | Complete |
-| 2: Extraction + Calculation Core | 2/? | In progress |
+| 2: Extraction + Calculation Core | 2/? | In progress (01 and 02 done, 03+ pending) |
 
 **Execution Metrics:**
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
+| Phase 02-extraction-calculation-core P01 | 45min | 2 tasks | 6 files |
 | Phase 02-extraction-calculation-core P02 | 35min | 2 tasks | 2 files |
 
 *Updated after each plan completion*
@@ -49,6 +50,9 @@ Recent decisions affecting current work:
 - [Phase 02-extraction-calculation-core]: Calculator: SAFE_NODES frozenset rejects Call/Attribute/Name/Import — only literal arithmetic allowed
 - [Phase 02-extraction-calculation-core]: pct_change: unit check skipped when either unit arg is None or empty string — unlabeled values pass through
 - [Phase 02-extraction-calculation-core]: sum_values: warns (unit_warning) on heterogeneous units but does not reject the sum
+- [Phase 02-01]: Aggregate detection applied first (higher specificity) — 1940 Total, Cal. yr, cumulative -> aggregate bucket, not month
+- [Phase 02-01]: parse_cell_value is module-level in classify_table_rows.py — importable by Phase 3 calculator
+- [Phase 02-01]: pytest.ini: -p no:anyio etc. needed to suppress Anaconda entrypoint loading errors in this venv
 
 ### Pending Todos
 
@@ -63,6 +67,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 02-extraction-calculation-core 02-02-PLAN.md — 59 tests pass.
-Next: Continue Phase 2 — plan 02-03 (extract_table_block) or 02-04 (normalize_answer).
+Stopped at: Completed 02-extraction-calculation-core 02-01-PLAN.md — extract_table_block + classify_table_rows, 64 tests pass.
+Next: Continue Phase 2 — plan 02-03 (normalize_answer) or 02-04 depending on roadmap.
 Resume file: None
