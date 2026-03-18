@@ -50,13 +50,12 @@ Plans:
   3. `calculate("pct_change(2602, 3100)")` returns the correct percentage using `decimal.Decimal`; passing inputs with mismatched units returns a structured error rather than a silent wrong answer
   4. `normalize_answer(raw)` produces exact benchmark-format strings for every distinct pattern observed in the `officeqa_full.csv` answer column — integers have comma separators, percentages have exactly two decimal places with trailing zeros preserved
   5. Unit test suite passes for all calculator operations (arithmetic, `pct_change`, `sum_values` count mismatch, unit mismatch rejection) and all normalizer format patterns
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 02-01: Answer format survey — analyze `officeqa_full.csv` and `officeqa_pro.csv` answer columns; document all distinct format patterns before writing any normalization code
-- [ ] 02-02: Table block extractor (`extract_table_block`) + monthly-vs-annual row discriminator (`classify_table_rows`) with unit tests
-- [ ] 02-03: AST calculator (`calculate`) with `decimal.Decimal`, `pct_change`, `sum_values`, unit mismatch rejection, and full unit test suite
-- [ ] 02-04: Answer normalizer (`normalize_answer`) built from the format survey results; unit tests assert `normalize(raw) == expected` for all surveyed patterns
+- [ ] 02-01-PLAN.md — Table block extractor (extract_table_block) + row classifier (classify_table_rows) with unit tests
+- [ ] 02-02-PLAN.md — AST calculator (calculate) with decimal.Decimal, pct_change, sum_values, unit mismatch rejection, and full unit test suite
+- [ ] 02-03-PLAN.md — Format survey fixture + answer normalizer (normalize_answer) built from survey results; parametrized tests for all format patterns
 
 ### Phase 3: Agent Loop + Scratch Space
 **Goal**: The full retrieval-to-answer pipeline runs end-to-end through the agent with isolated per-question scratch files and an infinite-loop guard
@@ -131,8 +130,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Environment + Retrieval Foundation | 0/3 | Planned | - |
-| 2. Extraction + Calculation Core | 0/4 | Not started | - |
+| 1. Environment + Retrieval Foundation | 3/3 | Complete | 2026-03-18 |
+| 2. Extraction + Calculation Core | 0/3 | Planned | - |
 | 3. Agent Loop + Scratch Space | 0/3 | Not started | - |
 | 4. Verifier Subagent + Reliability | 0/3 | Not started | - |
 | 5. A2A HTTP Server | 0/3 | Not started | - |
@@ -140,4 +139,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-18 after Phase 1 planning*
+*Last updated: 2026-03-18 after Phase 2 planning*
