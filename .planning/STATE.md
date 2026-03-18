@@ -5,33 +5,35 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Every answer must be traceable to a specific sentence or table cell in the local corpus — no hallucination, no web search, exact arithmetic.
-**Current focus:** Phase 1 — Environment + Retrieval Foundation
+**Current focus:** Phase 2 — Extraction + Calculation Core
 
 ## Current Position
 
-Phase: 1 of 6 (Environment + Retrieval Foundation)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-03-17 — Roadmap and state initialized
+Phase: 2 of 6 (Extraction + Calculation Core)
+Plan: 2 of N in current phase
+Status: Phase 2 plan 02 complete — calculator module with 59 passing tests
+Last activity: 2026-03-18 — 02-02 calculator (calculate, pct_change, sum_values) executed and committed
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 5 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02)
+- Total execution time: 2 sessions
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 1: Environment + Retrieval Foundation | 3/3 | Complete |
+| 2: Extraction + Calculation Core | 2/? | In progress |
 
-**Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+**Execution Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 02-extraction-calculation-core P02 | 35min | 2 tasks | 2 files |
 
 *Updated after each plan completion*
 
@@ -44,6 +46,9 @@ Recent decisions affecting current work:
 
 - [Roadmap]: CAL-07 split — basic calculator operations (pct_change, sum_values) delivered in Phase 2 via CAL-02/CAL-03; advanced statistical formulas (CAGR, OLS, Box-Cox, etc.) deferred to Phase 6 where they are needed for hard questions
 - [Roadmap]: Phase 2 begins with a format survey of `officeqa_full.csv` answer column before any normalizer code is written — prevents format mismatch failures late
+- [Phase 02-extraction-calculation-core]: Calculator: SAFE_NODES frozenset rejects Call/Attribute/Name/Import — only literal arithmetic allowed
+- [Phase 02-extraction-calculation-core]: pct_change: unit check skipped when either unit arg is None or empty string — unlabeled values pass through
+- [Phase 02-extraction-calculation-core]: sum_values: warns (unit_warning) on heterogeneous units but does not reject the sum
 
 ### Pending Todos
 
@@ -57,6 +62,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Roadmap created, STATE.md initialized — ready to begin Phase 1 planning
+Last session: 2026-03-18
+Stopped at: Completed 02-extraction-calculation-core 02-02-PLAN.md — 59 tests pass.
+Next: Continue Phase 2 — plan 02-03 (extract_table_block) or 02-04 (normalize_answer).
 Resume file: None
