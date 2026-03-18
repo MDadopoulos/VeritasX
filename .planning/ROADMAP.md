@@ -131,7 +131,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Environment + Retrieval Foundation | 3/3 | Complete | 2026-03-18 |
-| 2. Extraction + Calculation Core | 0/3 | Planned | - |
+| 2. Extraction + Calculation Core | 3/3 | Complete | 2026-03-18 |
 | 3. Agent Loop + Scratch Space | 0/3 | Not started | - |
 | 4. Verifier Subagent + Reliability | 0/3 | Not started | - |
 | 5. A2A HTTP Server | 0/3 | Not started | - |
@@ -139,4 +139,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-18 after Phase 2 planning*
+*Last updated: 2026-03-18 after Phase 2 execution*
