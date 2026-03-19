@@ -74,6 +74,17 @@ Plans:
 - [ ] 03-02-PLAN.md — Create agent.py with SYSTEM_PROMPT (planning gate, scratch instructions, tool rules), create_deep_agent wiring, run_question entry point
 - [ ] 03-03-PLAN.md — Unit tests for scratch lifecycle, end-to-end smoke tests on 3 questions, human verification of agent trace
 
+### Phase 03.1: Architecture Refactor: Deep Agent Native Tools + Model-Agnostic Pipeline (INSERTED)
+
+**Goal:** Refactor tool registration and agent wiring so all tools run as native Deep Agent tools, pipeline works with Gemini and Claude via MODEL_ID. No new capabilities — removes legacy workarounds, establishes clean architecture.
+**Depends on:** Phase 3
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03.1-01-PLAN.md — Rewrite 5 tool modules as plain functions, delete retrieval_wrappers.py
+- [ ] 03.1-02-PLAN.md — Rewrite model_adapter + agent.py for env-based config
+- [ ] 03.1-03-PLAN.md — Rewrite tests, add model-switch test, update planning docs
+
 ### Phase 4: Verifier Subagent + Reliability
 **Goal**: No answer reaches the normalizer without passing a four-dimension independent verification — evidence coverage, unit consistency, arithmetic correctness, and format match
 **Depends on**: Phase 3
