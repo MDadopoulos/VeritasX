@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 3 of 6 (Agent Loop + Scratch Space)
-Plan: 2 of 3 in current phase (03-02 complete)
-Status: Phase 3 Plan 02 complete — agent.py + retrieval_wrappers.py created, all imports verified, 361 tests pass
-Last activity: 2026-03-19 — Phase 3 Plan 02 executed, 361 tests pass
+Plan: 3 of 3 in current phase (03-03 at checkpoint — awaiting human-verify)
+Status: Phase 3 Plan 03 tasks 1-2 complete — test_scratch.py (7 unit tests), test_agent.py (5 integration smoke tests), 368 tests pass; stopped at Task 3 checkpoint:human-verify
+Last activity: 2026-03-19 — Phase 3 Plan 03 partial execution (tasks 1-2), 368 tests pass
 
-Progress: [████░░░░░░] 38%
+Progress: [████░░░░░░] 42%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02)
+- Total plans completed: 9 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02) — 03-03 at checkpoint
 - Total execution time: 4 sessions
 
 **By Phase:**
@@ -28,7 +28,7 @@ Progress: [████░░░░░░] 38%
 |-------|-------|--------|
 | 1: Environment + Retrieval Foundation | 3/3 | Complete |
 | 2: Extraction + Calculation Core | 3/3 | Complete |
-| 3: Agent Loop + Scratch Space | 2/3 | In progress |
+| 3: Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) |
 
 **Execution Metrics:**
 
@@ -38,6 +38,7 @@ Progress: [████░░░░░░] 38%
 | Phase 02-extraction-calculation-core P02 | 35min | 2 tasks | 2 files |
 | Phase 02-extraction-calculation-core P03 | 25min | 2 tasks | 4 files |
 | Phase 03-agent-loop-scratch-space P01 | 13min | 2 tasks | 12 files |
+| Phase 03-agent-loop-scratch-space P03 | 7min | 2 tasks (partial) | 4 files |
 
 *Updated after each plan completion*
 
@@ -63,6 +64,9 @@ Recent decisions affecting current work:
 - [Phase 03-01]: route_files needs thin _route_files_agent wrapper (no config param) — Config is TYPE_CHECKING import, causes NameError in Pydantic schema introspection
 - [Phase 03-01]: Optional[str] required for pct_change unit_old/unit_new — Pydantic V2 rejects None for str=None typed params in .invoke()
 - [Phase 03-01]: Tests for invalid-type inputs (None, int, list) call _impl directly — StructuredTool Pydantic validates before function, so INVALID_INPUT dict never reached via .run(None)
+- [Phase 03-03]: run_question_with_messages() added to agent.py — exposes message list for ToolMessage ordering assertions without breaking run_question signature
+- [Phase 03-03]: Integration test Q selection: Q1=UID0002 (easy lookup), Q2=UID0004 (pct_change), Q3=UID0003 (table sum)
+- [Phase 03-03]: ToolMessage ordering test uses getattr(msg, 'name', None) — compatible across langchain_core versions
 
 ### Pending Todos
 
@@ -77,6 +81,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-19
-Stopped at: Phase 3 Plan 02 complete — agent.py (SYSTEM_PROMPT, create_agent, run_question) + retrieval_wrappers.py created, 361 tests pass.
-Next: Execute Phase 3 Plan 03 (smoke tests for agent end-to-end)
+Stopped at: Phase 3 Plan 03 checkpoint:human-verify (Task 3) — test_scratch.py + test_agent.py created, 368 tests pass. Awaiting human to run integration tests with Vertex AI credentials.
+Next: After human verifies integration test output, confirm Task 3 done and close out 03-03-SUMMARY.md
 Resume file: None
