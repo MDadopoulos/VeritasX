@@ -81,9 +81,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03.1-01-PLAN.md — Rewrite 5 tool modules as plain functions, delete retrieval_wrappers.py
-- [ ] 03.1-02-PLAN.md — Rewrite model_adapter + agent.py for env-based config
-- [ ] 03.1-03-PLAN.md — Rewrite tests, add model-switch test, update planning docs
+- [x] 03.1-01-PLAN.md — Rewrite 5 tool modules as plain functions, delete retrieval_wrappers.py
+- [x] 03.1-02-PLAN.md — Rewrite model_adapter + agent.py for env-based config
+- [x] 03.1-03-PLAN.md — Rewrite tests, add model-switch test, update planning docs
 
 ### Phase 4: Verifier Subagent + Reliability
 **Goal**: No answer reaches the normalizer without passing a four-dimension independent verification — evidence coverage, unit consistency, arithmetic correctness, and format match
@@ -143,11 +143,12 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Environment + Retrieval Foundation | 3/3 | Complete | 2026-03-18 |
 | 2. Extraction + Calculation Core | 3/3 | Complete | 2026-03-18 |
-| 3. Agent Loop + Scratch Space | 0/3 | Not started | - |
+| 3. Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) | - |
+| 3.1. Architecture Refactor | 3/3 | Complete | 2026-03-20 |
 | 4. Verifier Subagent + Reliability | 0/3 | Not started | - |
 | 5. A2A HTTP Server | 0/3 | Not started | - |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-19 after Phase 3 planning*
+*Last updated: 2026-03-20 after Phase 3.1 Architecture Refactor complete*
