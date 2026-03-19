@@ -1,7 +1,7 @@
 """
 model_adapter.py — Model factory dispatching on MODEL_ID prefix.
 
-Provides a single get_model() function that reads MODEL_ID from config
+Provides a single get_model() function that reads MODEL_ID from the environment
 and returns the appropriate LangChain chat model instance.
 
 Supported prefixes:
@@ -15,48 +15,44 @@ only code change needed to switch between Gemini and Claude.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from src.config import Config
+import os
 
 
-def get_model(config: "Config | None" = None):
+def get_model(model_id: str | None = None):
     """
     Return the appropriate LangChain chat model based on MODEL_ID.
 
     Args:
-        config: Optional Config instance. If None, get_config() is called
-                to read from environment. Pass a config in tests to avoid
-                loading real environment variables.
+        model_id: Optional model ID string. If None, reads MODEL_ID from the
+                  environment (defaulting to "gemini-2.0-flash").
 
     Returns:
         ChatGoogleGenerativeAI for "gemini-*" model IDs.
         ChatAnthropicVertex for "claude-*" model IDs.
 
     Raises:
-        ValueError: if MODEL_ID does not start with "gemini-" or "claude-".
+        ValueError: if model_id does not start with "gemini-" or "claude-".
     """
-    if config is None:
-        from src.config import get_config
-        config = get_config()
+    if model_id is None:
+        model_id = os.environ.get("MODEL_ID", "gemini-2.0-flash")
 
-    model_id = config.model_id
+    project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 
     if model_id.startswith("gemini-"):
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=model_id,
-            project=config.google_cloud_project,
-            location=config.google_cloud_location,
+            project=project,
+            location=location,
         )
 
     if model_id.startswith("claude-"):
         from langchain_google_vertexai.model_garden import ChatAnthropicVertex
         return ChatAnthropicVertex(
             model_name=model_id,
-            project=config.google_cloud_project,
-            location=config.google_cloud_location,
+            project=project,
+            location=location,
         )
 
     raise ValueError(
