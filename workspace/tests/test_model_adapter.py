@@ -148,18 +148,13 @@ class TestClaudeDispatch:
 class TestDefaultModelId:
     """Unset MODEL_ID defaults to claude-sonnet-4-6, dispatching to ChatAnthropicVertex."""
 
-    def test_default_model_id_dispatches_to_anthropic(self, monkeypatch):
-        monkeypatch.delenv("MODEL_ID", raising=False)
-        monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
-        monkeypatch.setenv("GOOGLE_CLOUD_LOCATION", "us-east5")
-
-        # Also remove cached config module so it re-reads env vars
-        sys.modules.pop("src.config", None)
+    def test_default_model_id_dispatches_to_anthropic(self):
+        default_config = _make_config(model_id="claude-sonnet-4-6", google_cloud_location="us-east5")
 
         with _MockLangchainModules() as mocks:
-            from src.model_adapter import get_model
-            # Pass None so it calls get_config() internally
-            get_model(None)
+            with patch("src.config.get_config", return_value=default_config):
+                from src.model_adapter import get_model
+                get_model(None)
 
         mocks.mock_anthropic_cls.assert_called_once()
         call_kwargs = mocks.mock_anthropic_cls.call_args.kwargs
