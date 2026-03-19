@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 3 of 6 (Agent Loop + Scratch Space)
-Plan: 0 of N in current phase
-Status: Phase 2 complete — all 3 plans executed, 17/17 must-haves verified, 361 tests pass
-Last activity: 2026-03-18 — Phase 2 execution complete, verification passed
+Plan: 1 of 3 in current phase (03-01 complete)
+Status: Phase 3 Plan 01 complete — deepagents installed, 7 tools decorated, scratch.py created
+Last activity: 2026-03-19 — Phase 3 Plan 01 executed, 361 tests pass
 
-Progress: [████░░░░░░] 33%
+Progress: [████░░░░░░] 38%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03)
-- Total execution time: 3 sessions
+- Total plans completed: 8 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01)
+- Total execution time: 4 sessions
 
 **By Phase:**
 
@@ -28,7 +28,7 @@ Progress: [████░░░░░░] 33%
 |-------|-------|--------|
 | 1: Environment + Retrieval Foundation | 3/3 | Complete |
 | 2: Extraction + Calculation Core | 3/3 | Complete |
-| 3: Agent Loop + Scratch Space | 0/3 | Not started |
+| 3: Agent Loop + Scratch Space | 1/3 | In progress |
 
 **Execution Metrics:**
 
@@ -37,6 +37,7 @@ Progress: [████░░░░░░] 33%
 | Phase 02-extraction-calculation-core P01 | 45min | 2 tasks | 6 files |
 | Phase 02-extraction-calculation-core P02 | 35min | 2 tasks | 2 files |
 | Phase 02-extraction-calculation-core P03 | 25min | 2 tasks | 4 files |
+| Phase 03-agent-loop-scratch-space P01 | 13min | 2 tasks | 12 files |
 
 *Updated after each plan completion*
 
@@ -57,6 +58,11 @@ Recent decisions affecting current work:
 - [Phase 02-01]: pytest.ini: -p no:anyio etc. needed to suppress Anaconda entrypoint loading errors in this venv
 - [Phase 02-extraction-calculation-core]: normalize_answer: pass-through design — 8-step decision tree identifies format type, returns cleaned string unchanged; benchmark format IS expected format
 - [Phase 02-extraction-calculation-core]: format_survey.json as living fixture: parametrized tests load it — adding examples automatically adds tests; verified against 258 unique answers from both CSVs
+- [Phase 03-01]: @tool decorator — name arg must be positional: tool("name")(fn) not @tool(name="name")
+- [Phase 03-01]: Wrapper pattern: original functions renamed _impl, StructuredTool aliases registered; avoids direct @tool decoration which breaks positional-arg test call sites
+- [Phase 03-01]: route_files needs thin _route_files_agent wrapper (no config param) — Config is TYPE_CHECKING import, causes NameError in Pydantic schema introspection
+- [Phase 03-01]: Optional[str] required for pct_change unit_old/unit_new — Pydantic V2 rejects None for str=None typed params in .invoke()
+- [Phase 03-01]: Tests for invalid-type inputs (None, int, list) call _impl directly — StructuredTool Pydantic validates before function, so INVALID_INPUT dict never reached via .run(None)
 
 ### Pending Todos
 
@@ -70,7 +76,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18
-Stopped at: Phase 2 complete — 3/3 plans executed, 17/17 must-haves verified. 361 tests pass.
-Next: /gsd:plan-phase 3 (Agent Loop + Scratch Space)
+Last session: 2026-03-19
+Stopped at: Phase 3 Plan 01 complete — deepagents installed, 7 tools @tool-decorated, scratch.py created, 361 tests pass.
+Next: Execute Phase 3 Plan 02 (agent.py wiring with create_deep_agent)
 Resume file: None
