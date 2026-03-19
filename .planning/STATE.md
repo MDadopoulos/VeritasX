@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Every answer must be traceable to a specific sentence or table cell in the local corpus — no hallucination, no web search, exact arithmetic.
-**Current focus:** Phase 3 — Agent Loop + Scratch Space
+**Current focus:** Phase 3.1 — Architecture Refactor: Deep Agent Native Tools + Model-Agnostic Pipeline
 
 ## Current Position
 
-Phase: 3 of 6 (Agent Loop + Scratch Space)
-Plan: 3 of 3 in current phase (03-03 at checkpoint — awaiting human-verify)
-Status: Phase 3 Plan 03 tasks 1-2 complete — test_scratch.py (7 unit tests), test_agent.py (5 integration smoke tests), 368 tests pass; stopped at Task 3 checkpoint:human-verify
-Last activity: 2026-03-19 — Phase 3 Plan 03 partial execution (tasks 1-2), 368 tests pass
+Phase: 3.1 of 6 (Architecture Refactor — inserted after Phase 3)
+Plan: 1 of 3 complete in Phase 3.1 (03.1-01 complete)
+Status: Phase 3.1 Plan 01 complete — all 5 tool modules rewritten as plain functions, retrieval_wrappers.py deleted, 368 tests pass
+Last activity: 2026-03-20 — Phase 3.1 Plan 01 complete
 
 Progress: [████░░░░░░] 42%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02) — 03-03 at checkpoint
+- Total plans completed: 10 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02 | Phase 3.1: 03.1-01) — 03-03 at checkpoint
 - Total execution time: 4 sessions
 
 **By Phase:**
@@ -29,6 +29,7 @@ Progress: [████░░░░░░] 42%
 | 1: Environment + Retrieval Foundation | 3/3 | Complete |
 | 2: Extraction + Calculation Core | 3/3 | Complete |
 | 3: Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) |
+| 3.1: Architecture Refactor | 1/3 | In progress (03.1-01 complete) |
 
 **Execution Metrics:**
 
@@ -40,9 +41,15 @@ Progress: [████░░░░░░] 42%
 | Phase 03-agent-loop-scratch-space P01 | 13min | 2 tasks | 12 files |
 | Phase 03-agent-loop-scratch-space P03 | 7min | 2 tasks (partial) | 4 files |
 
+| Phase 03.1-architecture-refactor P01 | 12min | 2 tasks | 11 files |
+
 *Updated after each plan completion*
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 3.1 inserted after Phase 3: Architecture Refactor: Deep Agent Native Tools + Model-Agnostic Pipeline (URGENT)
 
 ### Decisions
 
@@ -67,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 03-03]: run_question_with_messages() added to agent.py — exposes message list for ToolMessage ordering assertions without breaking run_question signature
 - [Phase 03-03]: Integration test Q selection: Q1=UID0002 (easy lookup), Q2=UID0004 (pct_change), Q3=UID0003 (table sum)
 - [Phase 03-03]: ToolMessage ordering test uses getattr(msg, 'name', None) — compatible across langchain_core versions
+- [Phase 03.1-architecture-refactor]: Plain functions replace StructuredTool aliases — tools passed directly to create_deep_agent as callables
+- [Phase 03.1-architecture-refactor]: route_files uses _CORPUS_DIR module-level constant from CORPUS_DIR env var — no Config parameter needed
 
 ### Pending Todos
 
@@ -80,7 +89,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19
-Stopped at: Phase 3 Plan 03 checkpoint:human-verify (Task 3) — test_scratch.py + test_agent.py created, 368 tests pass. Awaiting human to run integration tests with Vertex AI credentials.
-Next: After human verifies integration test output, confirm Task 3 done and close out 03-03-SUMMARY.md
+Last session: 2026-03-20
+Stopped at: Completed 03.1-01-PLAN.md — all 5 tools as plain functions, retrieval_wrappers.py deleted, 368 tests pass
+Next: Execute 03.1-02-PLAN.md — rewrite agent.py to use plain function tools directly with create_deep_agent
 Resume file: None
