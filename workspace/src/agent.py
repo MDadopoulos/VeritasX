@@ -2,27 +2,20 @@
 agent.py — Agent factory, system prompt, and run_question entry point.
 
 Composes all Phase 1+2 tools into a functioning agent loop with scratch
-isolation, planning gate, retrieval call limiting, and exhaustion handling.
+isolation, planning gate, and native Deep Agent turn management.
 
 Public API:
-    SYSTEM_PROMPT       str             — System prompt enforcing agent behavior
-    RETRIEVAL_LIMIT     int             — Max retrieval tool calls per question (20)
-    create_agent(config=None)           — Returns a fresh compiled CompiledGraph
-    run_question(uid, question, config) — Orchestrates per-question lifecycle
+    SYSTEM_PROMPT                           str   — System prompt enforcing agent behavior
+    create_agent()                                — Returns a fresh compiled CompiledGraph
+    run_question(uid, question)             str   — Orchestrates per-question lifecycle
+    run_question_with_messages(uid, question) dict — Returns answer + full message list
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from src.config import Config
-
 # ---------------------------------------------------------------------------
-# Constants
+# System prompt
 # ---------------------------------------------------------------------------
-
-RETRIEVAL_LIMIT: int = 20  # per context decision — 20 calls per run, per tool
 
 SYSTEM_PROMPT: str = """\
 ## Mandatory Planning Gate
@@ -75,10 +68,6 @@ After calling normalize_answer, WRITE to {uid}/answer.txt:
 
 - NEVER compute percent change with inline arithmetic. ALWAYS use the pct_change tool.
 - NEVER generate arithmetic formulas inline. ALWAYS use calculate() for all arithmetic.
-- When route_files or search_in_file returns RETRIEVAL_EXHAUSTED, STOP calling that tool.
-  Attempt to answer from evidence gathered so far.
-  If evidence is insufficient, respond with EXACTLY:
-  "I cannot determine the answer from the available corpus."
 """
 
 
@@ -87,17 +76,13 @@ After calling normalize_answer, WRITE to {uid}/answer.txt:
 # ---------------------------------------------------------------------------
 
 
-def create_agent(config: "Config | None" = None):
+def create_agent():
     """
     Create and return a fresh compiled agent with all 7 tools registered.
 
-    Creates fresh counter-wrapped retrieval tools so each agent instance has
-    its own independent call counter starting at 0. Call this once per question
-    (not once per module) to guarantee AGT-02 idempotency.
-
-    Args:
-        config: Optional Config instance. If None, get_config() is called
-                when the model is instantiated.
+    Call this once per question (not once per module) to guarantee AGT-02
+    idempotency — each call creates a fresh MemorySaver checkpointer so no
+    state bleeds between questions.
 
     Returns:
         A compiled LangGraph agent (CompiledGraph) ready for .invoke().
@@ -107,25 +92,19 @@ def create_agent(config: "Config | None" = None):
     from langgraph.checkpoint.memory import MemorySaver
 
     from src.model_adapter import get_model
-    from src.tools.retrieval_wrappers import (
-        make_counted_route_files,
-        make_counted_search_in_file,
-    )
+    from src.tools.route_files import route_files
+    from src.tools.search_in_file import search_in_file
     from src.tools.extract_table_block import extract_table_block
     from src.tools.calculate import calculate, pct_change, sum_values
     from src.tools.normalize_answer import normalize_answer
 
-    model = get_model(config)
-
-    # Fresh counter-wrappers per agent — this ensures per-question call limits
-    counted_rf = make_counted_route_files(RETRIEVAL_LIMIT)
-    counted_sif = make_counted_search_in_file(RETRIEVAL_LIMIT)
+    model = get_model()
 
     agent = create_deep_agent(
         model=model,
         tools=[
-            counted_rf,
-            counted_sif,
+            route_files,
+            search_in_file,
             extract_table_block,
             calculate,
             pct_change,
@@ -133,7 +112,6 @@ def create_agent(config: "Config | None" = None):
             normalize_answer,
         ],
         system_prompt=SYSTEM_PROMPT,
-        # No ToolCallLimitMiddleware — counter-wrappers handle limiting directly
         backend=FilesystemBackend(root_dir="./scratch", virtual_mode=False),
         checkpointer=MemorySaver(),
     )
@@ -146,14 +124,14 @@ def create_agent(config: "Config | None" = None):
 # ---------------------------------------------------------------------------
 
 
-def run_question(uid: str, question: str, config: "Config | None" = None) -> str:
+def run_question(uid: str, question: str) -> str:
     """
     Orchestrate the per-question lifecycle: wipe scratch, create agent, invoke.
 
     Per-question lifecycle (SCR-01, AGT-02):
     1. prepare_scratch(uid) — wipe and recreate ./scratch/{uid}/ for fresh state
-    2. create_agent(config) — fresh CompiledGraph with fresh MemorySaver and
-       fresh counter-wrappers so no state bleeds between questions
+    2. create_agent() — fresh CompiledGraph with fresh MemorySaver so no state
+       bleeds between questions
     3. Invoke agent with UID-prefixed user message so the agent knows its scratch path
     4. Return final answer string from last message
 
@@ -161,7 +139,6 @@ def run_question(uid: str, question: str, config: "Config | None" = None) -> str
         uid:      Non-empty string identifying this question run (used as scratch key
                   and thread_id for the MemorySaver checkpointer).
         question: The user's question string.
-        config:   Optional Config instance.
 
     Returns:
         Final answer string from the agent's last message.
@@ -171,12 +148,11 @@ def run_question(uid: str, question: str, config: "Config | None" = None) -> str
     # SCR-01: wipe and recreate scratch directory for this question
     prepare_scratch(uid)
 
-    # Create a fresh agent — fresh MemorySaver + fresh counter-wrappers per question
+    # Create a fresh agent — fresh MemorySaver per question
     # (Pitfall 1: MemorySaver does NOT reset on scratch dir wipe; must create new instance)
-    agent = create_agent(config)
+    agent = create_agent()
 
     # Prepend UID preamble so the agent knows which scratch subdirectory to write to
-    # (per research recommendation Open Question 2)
     user_message = (
         f"Question UID: {uid}\n"
         f"Scratch directory: {uid}/\n\n"
@@ -191,9 +167,7 @@ def run_question(uid: str, question: str, config: "Config | None" = None) -> str
     return result["messages"][-1].content
 
 
-def run_question_with_messages(
-    uid: str, question: str, config: "Config | None" = None
-) -> dict:
+def run_question_with_messages(uid: str, question: str) -> dict:
     """
     Orchestrate the per-question lifecycle and return both answer and full message list.
 
@@ -209,7 +183,7 @@ def run_question_with_messages(
     from src.scratch import prepare_scratch
 
     prepare_scratch(uid)
-    agent = create_agent(config)
+    agent = create_agent()
 
     user_message = (
         f"Question UID: {uid}\n"
