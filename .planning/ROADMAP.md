@@ -65,14 +65,14 @@ Plans:
   1. Running a sample question end-to-end creates `./scratch/{uid}/` containing all six expected files (`evidence.txt`, `tables.txt`, `extracted_values.txt`, `calc.txt`, `verification.txt`, `answer.txt`) — each with non-empty content
   2. Every numeric value in `extracted_values.txt` includes its unit alongside the value (e.g., `defense_1940 = 2602 (millions)`)
   3. Running the same question UID a second time overwrites the prior scratch directory without raising an error and produces the same answer
-  4. Calling any single tool more than 4 times in one question returns `RETRIEVAL_EXHAUSTED` — the agent does not loop indefinitely
+  4. Calling any single retrieval tool more than 20 times in one question returns `RETRIEVAL_EXHAUSTED` — the agent does not loop indefinitely (NOTE: context decision raised limit from 4 to 20)
   5. The agent writes a `write_todos` plan before first retrieval on every question; the system prompt constraint is visibly enforced in the trace
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 03-01: `create_deep_agent` wiring — `FilesystemMiddleware`, `TodoListMiddleware`, all tools registered, `MemorySaver` checkpointer, `thread_id` = question UID
-- [ ] 03-02: Scratch space layout — per-UID directory lifecycle, all six file writers, unit metadata enforcement in `extracted_values.txt`
-- [ ] 03-03: System prompt + iteration controls — `max_iterations=12`, per-tool call counter, `write_todos` pre-retrieval rule, `pct_change`-only percent change rule; end-to-end smoke test on 3 questions
+- [ ] 03-01-PLAN.md — Install deepagents, @tool-decorate all Phase 1+2 tools, create scratch.py lifecycle helpers
+- [ ] 03-02-PLAN.md — Create agent.py with SYSTEM_PROMPT (planning gate, scratch instructions, tool rules), create_deep_agent wiring, run_question entry point
+- [ ] 03-03-PLAN.md — Unit tests for scratch lifecycle, end-to-end smoke tests on 3 questions, human verification of agent trace
 
 ### Phase 4: Verifier Subagent + Reliability
 **Goal**: No answer reaches the normalizer without passing a four-dimension independent verification — evidence coverage, unit consistency, arithmetic correctness, and format match
@@ -139,4 +139,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-18 after Phase 2 execution*
+*Last updated: 2026-03-19 after Phase 3 planning*
