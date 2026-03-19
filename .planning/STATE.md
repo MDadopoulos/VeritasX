@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 3.1 of 6 (Architecture Refactor — inserted after Phase 3)
-Plan: 1 of 3 complete in Phase 3.1 (03.1-01 complete)
-Status: Phase 3.1 Plan 01 complete — all 5 tool modules rewritten as plain functions, retrieval_wrappers.py deleted, 368 tests pass
-Last activity: 2026-03-20 — Phase 3.1 Plan 01 complete
+Plan: 2 of 3 complete in Phase 3.1 (03.1-01, 03.1-02 complete)
+Status: Phase 3.1 Plan 02 complete — model_adapter.py and agent.py rewritten, no Config, no RETRIEVAL_EXHAUSTED, plain function tools wired
+Last activity: 2026-03-20 — Phase 3.1 Plan 02 complete
 
 Progress: [████░░░░░░] 42%
 
@@ -29,7 +29,7 @@ Progress: [████░░░░░░] 42%
 | 1: Environment + Retrieval Foundation | 3/3 | Complete |
 | 2: Extraction + Calculation Core | 3/3 | Complete |
 | 3: Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) |
-| 3.1: Architecture Refactor | 1/3 | In progress (03.1-01 complete) |
+| 3.1: Architecture Refactor | 2/3 | In progress (03.1-01, 03.1-02 complete) |
 
 **Execution Metrics:**
 
@@ -42,6 +42,7 @@ Progress: [████░░░░░░] 42%
 | Phase 03-agent-loop-scratch-space P03 | 7min | 2 tasks (partial) | 4 files |
 
 | Phase 03.1-architecture-refactor P01 | 12min | 2 tasks | 11 files |
+| Phase 03.1-architecture-refactor P02 | 6min | 2 tasks | 3 files |
 
 *Updated after each plan completion*
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase 03-03]: ToolMessage ordering test uses getattr(msg, 'name', None) — compatible across langchain_core versions
 - [Phase 03.1-architecture-refactor]: Plain functions replace StructuredTool aliases — tools passed directly to create_deep_agent as callables
 - [Phase 03.1-architecture-refactor]: route_files uses _CORPUS_DIR module-level constant from CORPUS_DIR env var — no Config parameter needed
+- [Phase 03.1-architecture-refactor]: get_model(model_id: str | None) reads MODEL_ID from os.environ with gemini-2.0-flash default — no Config dependency
+- [Phase 03.1-architecture-refactor]: create_agent() has no parameters — calls get_model() with no args which reads env at call time
+- [Phase 03.1-architecture-refactor]: SYSTEM_PROMPT RETRIEVAL_EXHAUSTED paragraph removed — Deep Agent native max-turns handles limits
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-20
-Stopped at: Completed 03.1-01-PLAN.md — all 5 tools as plain functions, retrieval_wrappers.py deleted, 368 tests pass
-Next: Execute 03.1-02-PLAN.md — rewrite agent.py to use plain function tools directly with create_deep_agent
+Stopped at: Completed 03.1-02-PLAN.md — model_adapter.py and agent.py rewritten, no Config, no RETRIEVAL_EXHAUSTED, plain function tools
+Next: Execute 03.1-03-PLAN.md — final integration/cleanup phase
 Resume file: None
