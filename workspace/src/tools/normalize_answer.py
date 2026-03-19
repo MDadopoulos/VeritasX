@@ -23,6 +23,8 @@ Returns:
 
 import re
 
+from langchain_core.tools import tool
+
 # Regex for unit words (million/billion/thousand, with or without 's', case-insensitive)
 _UNIT_WORD_RE = re.compile(r'\b(millions?|billions?|thousands?)\b', re.IGNORECASE)
 
@@ -41,7 +43,7 @@ _DATE_RE = re.compile(
 _UNICODE_MINUS = '\u2212'
 
 
-def normalize_answer(raw: str) -> dict:
+def _normalize_answer_impl(raw: str) -> dict:
     """
     Normalize a raw answer string to match benchmark format exactly.
 
@@ -105,3 +107,10 @@ def normalize_answer(raw: str) -> dict:
     # Preserve commas from original (2,602 stays 2,602).
     # Do not add commas if absent (935851121560 stays 935851121560).
     return {"result": cleaned}
+
+
+# ---------------------------------------------------------------------------
+# @tool-decorated StructuredTool alias for create_deep_agent registration.
+# ---------------------------------------------------------------------------
+
+normalize_answer = tool("normalize_answer")(_normalize_answer_impl)

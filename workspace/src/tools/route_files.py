@@ -21,6 +21,8 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from langchain_core.tools import tool
+
 if TYPE_CHECKING:
     from src.config import Config
 
@@ -140,7 +142,7 @@ def year_to_months(year: int) -> list[tuple[int, int]]:
     return [(year, m) for m in range(1, 13)]
 
 
-def route_files(question: str, config: "Config | None" = None) -> dict:
+def _route_files_impl(question: str, config: "Config | None" = None) -> dict:
     """
     Extract year references from question and return matching bulletin file paths.
 
@@ -209,3 +211,33 @@ def route_files(question: str, config: "Config | None" = None) -> dict:
         "years_found": years,
         "fy_mapped": bool(fy_years),
     }
+
+
+# ---------------------------------------------------------------------------
+# @tool-decorated StructuredTool alias for create_deep_agent registration.
+# The config parameter is excluded from the schema — agent passes only question.
+# A thin wrapper without config is used so the tool schema stays simple.
+# ---------------------------------------------------------------------------
+
+
+def _route_files_agent(question: str) -> dict:
+    """
+    Extract year references from question and return matching bulletin file paths.
+
+    Args:
+        question: The user's question string.
+
+    Returns:
+        On success:
+            {
+                "paths": [list of absolute path strings that exist on disk],
+                "years_found": [list of {"year": int, "type": str} dicts],
+                "fy_mapped": bool
+            }
+        On no-year-found:
+            {"error": "no_year_found", "question": question}
+    """
+    return _route_files_impl(question)
+
+
+route_files = tool("route_files")(_route_files_agent)

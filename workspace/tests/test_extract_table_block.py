@@ -40,24 +40,24 @@ def load_fixture(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 def test_empty_span_text_returns_invalid_input():
-    result = extract_table_block("", "some anchor")
+    result = extract_table_block.invoke({"span_text": "", "anchor": "some anchor"})
     assert result.get("error") == "INVALID_INPUT"
     assert "span_text" in result["reason"].lower()
 
 
 def test_whitespace_only_span_text_returns_invalid_input():
-    result = extract_table_block("   \n  \t  ", "some anchor")
+    result = extract_table_block.invoke({"span_text": "   \n  \t  ", "anchor": "some anchor"})
     assert result.get("error") == "INVALID_INPUT"
 
 
 def test_empty_anchor_returns_invalid_input():
-    result = extract_table_block("some text\n| col1 | col2 |", "")
+    result = extract_table_block.invoke({"span_text": "some text\n| col1 | col2 |", "anchor": ""})
     assert result.get("error") == "INVALID_INPUT"
     assert "anchor" in result["reason"].lower()
 
 
 def test_whitespace_only_anchor_returns_invalid_input():
-    result = extract_table_block("some text\n| col1 | col2 |", "   ")
+    result = extract_table_block.invoke({"span_text": "some text\n| col1 | col2 |", "anchor": "   "})
     assert result.get("error") == "INVALID_INPUT"
 
 
@@ -67,7 +67,7 @@ def test_whitespace_only_anchor_returns_invalid_input():
 
 def test_anchor_not_in_span_returns_no_table_found():
     span = "This is some text.\nNo tables here at all."
-    result = extract_table_block(span, "missing anchor phrase")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "missing anchor phrase"})
     assert result.get("error") == "NO_TABLE_FOUND"
 
 
@@ -78,7 +78,7 @@ def test_anchor_found_but_no_pipe_table_within_15_lines():
         lines.append(f"Plain text line {i}")
     lines.append("| col1 | col2 |")  # Line 22, too far
     span = "\n".join(lines)
-    result = extract_table_block(span, "anchor phrase")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "anchor phrase"})
     assert result.get("error") == "NO_TABLE_FOUND"
 
 
@@ -98,7 +98,7 @@ def test_single_table_basic_extraction():
         "| Expenditures | 9468 | 13653 |\n"
         "| Net deficit | 4081 | 6640 |\n"
     )
-    result = extract_table_block(span, "Federal Receipts")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "Federal Receipts"})
     assert "error" not in result
     assert "tables" in result
     assert len(result["tables"]) == 1
@@ -122,7 +122,7 @@ def test_unit_annotation_captured():
         "| --- | --- |\n"
         "| 100 | 200 |\n"
     )
-    result = extract_table_block(span, "Table Title")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "Table Title"})
     assert "error" not in result
     table = result["tables"][0]
     assert table["unit_annotation"] is not None
@@ -143,7 +143,7 @@ def test_table_with_footnotes_included():
         "Source: Daily Treasury Statement.\n"
         "14/ Revised figures.\n"
     )
-    result = extract_table_block(span, "Budget Summary")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "Budget Summary"})
     assert "error" not in result
     table = result["tables"][0]
     assert "Source" in table["footnotes"] or "14/" in table["footnotes"]
@@ -158,7 +158,7 @@ def test_table_without_footnotes_has_empty_footnotes_field():
         "\n"
         "Next section starts here.\n"
     )
-    result = extract_table_block(span, "Simple Table")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "Simple Table"})
     assert "error" not in result
     table = result["tables"][0]
     assert table["footnotes"] == ""
@@ -180,7 +180,7 @@ def test_multi_row_column_headers_preserved():
         "| January | 100 | 200 |\n"
         "| February | 150 | 250 |\n"
     )
-    result = extract_table_block(span, "Detailed Table")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "Detailed Table"})
     assert "error" not in result
     table = result["tables"][0]
     # Both header rows should be in table_text
@@ -211,7 +211,7 @@ def test_two_tables_in_span_returns_both():
         "| --- | --- |\n"
         "| Defense | 5000 |\n"
     )
-    result = extract_table_block(span, "First Table")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "First Table"})
     assert "error" not in result
     assert len(result["tables"]) == 2
     # First table has "Revenue"
@@ -234,7 +234,7 @@ def test_anchor_matching_is_case_insensitive():
         "| --- | --- |\n"
         "| 1953 | 65218 |\n"
     )
-    result = extract_table_block(span, "summary of federal fiscal operations")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "summary of federal fiscal operations"})
     assert "error" not in result
     assert len(result["tables"]) == 1
 
@@ -255,7 +255,7 @@ def test_start_line_is_1_indexed():
         "| --- |\n"
         "| 42 |\n"
     )
-    result = extract_table_block(span, "anchor")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "anchor"})
     assert "error" not in result
     table = result["tables"][0]
     # Pipe table starts at line 7 (1-indexed): lines 1-3 text, 4 blank, 5 unit, 6 blank, 7 pipe
@@ -277,7 +277,7 @@ def test_pipe_table_within_lookahead_window_is_found():
     lines.append("| --- | --- |")
     lines.append("| Jan | 100 |")
     span = "\n".join(lines)
-    result = extract_table_block(span, "anchor")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "anchor"})
     assert "error" not in result
 
 
@@ -289,7 +289,7 @@ def test_pipe_table_outside_lookahead_window_not_found():
         lines.append(f"Intervening line {i}")
     lines.append("| Col | Val |")
     span = "\n".join(lines)
-    result = extract_table_block(span, "anchor")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "anchor"})
     assert result.get("error") == "NO_TABLE_FOUND"
 
 
@@ -301,7 +301,7 @@ def test_1941_fixture_single_table_extraction():
     """Test real corpus fixture from 1941 bulletin."""
     content = load_fixture("treasury_bulletin_1941_01.txt")
     # Use a known phrase from the 1941 fixture
-    result = extract_table_block(content, "Budget Receipte and Expendituree")
+    result = extract_table_block.invoke({"span_text": content, "anchor": "Budget Receipte and Expendituree"})
     assert "error" not in result
     assert len(result["tables"]) >= 1
     table = result["tables"][0]
@@ -312,7 +312,7 @@ def test_1941_fixture_single_table_extraction():
 def test_1954_fixture_monthly_rows_present():
     """Test 1954_02 fixture contains monthly table data."""
     content = load_fixture("treasury_bulletin_1954_02.txt")
-    result = extract_table_block(content, "SUMMARY OF FEDERAL FISCAL OPERATIONS")
+    result = extract_table_block.invoke({"span_text": content, "anchor": "SUMMARY OF FEDERAL FISCAL OPERATIONS"})
     assert "error" not in result
     assert len(result["tables"]) >= 1
     table = result["tables"][0]
@@ -323,7 +323,7 @@ def test_1954_fixture_monthly_rows_present():
 def test_1954_fixture_unit_annotation_captured():
     """Unit annotation (In millions of dollars) captured in 1954 fixture."""
     content = load_fixture("treasury_bulletin_1954_02.txt")
-    result = extract_table_block(content, "SUMMARY OF FEDERAL FISCAL OPERATIONS")
+    result = extract_table_block.invoke({"span_text": content, "anchor": "SUMMARY OF FEDERAL FISCAL OPERATIONS"})
     assert "error" not in result
     table = result["tables"][0]
     assert table["unit_annotation"] is not None
@@ -333,7 +333,7 @@ def test_1954_fixture_unit_annotation_captured():
 def test_1954_fixture_footnotes_captured():
     """Footnotes with Source: prefix captured from 1954 fixture."""
     content = load_fixture("treasury_bulletin_1954_02.txt")
-    result = extract_table_block(content, "SUMMARY OF FEDERAL FISCAL OPERATIONS")
+    result = extract_table_block.invoke({"span_text": content, "anchor": "SUMMARY OF FEDERAL FISCAL OPERATIONS"})
     assert "error" not in result
     table = result["tables"][0]
     assert "Source" in table["footnotes"] or "1/" in table["footnotes"]
@@ -342,7 +342,7 @@ def test_1954_fixture_footnotes_captured():
 def test_1954_fixture_two_tables_found():
     """1954 fixture has two separate tables near fiscal operations content."""
     content = load_fixture("treasury_bulletin_1954_02.txt")
-    result = extract_table_block(content, "SUMMARY OF FEDERAL FISCAL OPERATIONS")
+    result = extract_table_block.invoke({"span_text": content, "anchor": "SUMMARY OF FEDERAL FISCAL OPERATIONS"})
     assert "error" not in result
     # The fixture contains the summary table AND the table 1 receipts table
     assert len(result["tables"]) >= 2
@@ -362,7 +362,7 @@ def test_all_table_rows_included_not_truncated():
         month = months[i % 12]
         rows.append(f"| {month} | {1000 + i} |")
     span = "\n".join(rows)
-    result = extract_table_block(span, "Anchor phrase")
+    result = extract_table_block.invoke({"span_text": span, "anchor": "Anchor phrase"})
     assert "error" not in result
     table = result["tables"][0]
     # Count pipe rows in table_text

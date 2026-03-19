@@ -8,11 +8,19 @@ Public API:
 
 All functions return a dict on both success and error. Never raise to caller.
 All arithmetic uses decimal.Decimal with prec=28 to avoid float contamination.
+
+Agent API:
+    calculate, pct_change, sum_values are @tool-decorated StructuredTool instances.
+    Use calculate.run(expr) for single-arg invocation, or
+    calculate.invoke({"expr": "..."}) for dict invocation.
 """
 
 import ast
 import re
 from decimal import Decimal, getcontext, InvalidOperation
+from typing import Optional
+
+from langchain_core.tools import tool
 
 getcontext().prec = 28
 
@@ -81,7 +89,7 @@ def _eval_node(node):
     return {"error": "UNSUPPORTED_NODE", "reason": f"{type(node).__name__} not handled"}
 
 
-def calculate(expr: str) -> dict:
+def _calculate_impl(expr: str) -> dict:
     """
     Evaluate an arithmetic expression safely using an AST whitelist.
 
@@ -126,7 +134,7 @@ def calculate(expr: str) -> dict:
     return {"result": result}
 
 
-def pct_change(old, new, unit_old: str = None, unit_new: str = None) -> dict:
+def _pct_change_impl(old, new, unit_old: Optional[str] = None, unit_new: Optional[str] = None) -> dict:
     """
     Calculate (new - old) / old * 100 rounded to 2 decimal places.
 
@@ -180,7 +188,7 @@ def pct_change(old, new, unit_old: str = None, unit_new: str = None) -> dict:
 _UNIT_RE = re.compile(r"\b(millions?|billions?|thousands?)\b", re.IGNORECASE)
 
 
-def sum_values(pairs: list, expected_count: int) -> dict:
+def _sum_values_impl(pairs: list, expected_count: int) -> dict:
     """
     Sum a list of (label, value) pairs, enforcing an expected count.
 
@@ -231,3 +239,13 @@ def sum_values(pairs: list, expected_count: int) -> dict:
         result["unit_warning"] = f"Heterogeneous units in labels: {sorted(units)}"
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# @tool-decorated StructuredTool aliases for create_deep_agent registration.
+# Use calculate.run(expr) or calculate.invoke({"expr": "..."}) from agent.
+# ---------------------------------------------------------------------------
+
+calculate = tool("calculate")(_calculate_impl)
+pct_change = tool("pct_change")(_pct_change_impl)
+sum_values = tool("sum_values")(_sum_values_impl)
