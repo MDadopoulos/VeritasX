@@ -5,10 +5,15 @@ All tests are fully offline — no real Vertex AI calls are made.
 ChatGoogleGenerativeAI and ChatAnthropicVertex constructors are mocked via
 sys.modules injection so the tests work even before langchain packages are
 available in the active interpreter.
+
+The new API reads MODEL_ID, GOOGLE_CLOUD_PROJECT, and GOOGLE_CLOUD_LOCATION
+directly from environment variables. Tests use monkeypatch or patch to set
+these before calling get_model(model_id=...).
 """
 
 from __future__ import annotations
 
+import os
 import sys
 import types
 from pathlib import Path
@@ -17,25 +22,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.config import Config
-
-
-def _make_config(**kwargs) -> Config:
-    """Create a minimal Config suitable for unit tests."""
-    defaults = dict(
-        model_id="claude-sonnet-4-6",
-        google_cloud_project="test-project",
-        google_cloud_location="us-east5",
-        google_genai_use_vertexai=True,
-        google_application_credentials="",
-        corpus_source="local",
-        corpus_dir=Path("/tmp/corpus"),
-        csv_full_path=Path("/tmp/officeqa_full.csv"),
-        csv_pro_path=Path("/tmp/officeqa_pro.csv"),
-    )
-    defaults.update(kwargs)
-    return Config(**defaults)
 
 
 class _MockLangchainModules:
@@ -81,14 +67,14 @@ class TestGeminiDispatch:
     """gemini-* model IDs dispatch to ChatGoogleGenerativeAI."""
 
     def test_gemini_prefix_returns_genai_instance(self):
-        config = _make_config(model_id="gemini-2.0-flash", google_cloud_location="global")
+        env = {"GOOGLE_CLOUD_PROJECT": "test-project", "GOOGLE_CLOUD_LOCATION": "global"}
 
-        with _MockLangchainModules() as mocks:
+        with _MockLangchainModules() as mocks, patch.dict(os.environ, env):
             mock_instance = MagicMock()
             mocks.mock_genai_cls.return_value = mock_instance
 
             from src.model_adapter import get_model
-            result = get_model(config)
+            result = get_model("gemini-2.0-flash")
 
         mocks.mock_genai_cls.assert_called_once_with(
             model="gemini-2.0-flash",
@@ -99,11 +85,11 @@ class TestGeminiDispatch:
         mocks.mock_anthropic_cls.assert_not_called()
 
     def test_gemini_pro_prefix_dispatches_to_genai(self):
-        config = _make_config(model_id="gemini-2.5-pro", google_cloud_location="global")
+        env = {"GOOGLE_CLOUD_PROJECT": "test-project", "GOOGLE_CLOUD_LOCATION": "global"}
 
-        with _MockLangchainModules() as mocks:
+        with _MockLangchainModules() as mocks, patch.dict(os.environ, env):
             from src.model_adapter import get_model
-            get_model(config)
+            get_model("gemini-2.5-pro")
 
         mocks.mock_genai_cls.assert_called_once()
         call_kwargs = mocks.mock_genai_cls.call_args.kwargs
@@ -115,14 +101,14 @@ class TestClaudeDispatch:
     """claude-* model IDs dispatch to ChatAnthropicVertex."""
 
     def test_claude_prefix_returns_anthropic_instance(self):
-        config = _make_config(model_id="claude-sonnet-4-6", google_cloud_location="us-east5")
+        env = {"GOOGLE_CLOUD_PROJECT": "test-project", "GOOGLE_CLOUD_LOCATION": "us-east5"}
 
-        with _MockLangchainModules() as mocks:
+        with _MockLangchainModules() as mocks, patch.dict(os.environ, env):
             mock_instance = MagicMock()
             mocks.mock_anthropic_cls.return_value = mock_instance
 
             from src.model_adapter import get_model
-            result = get_model(config)
+            result = get_model("claude-sonnet-4-6")
 
         mocks.mock_anthropic_cls.assert_called_once_with(
             model_name="claude-sonnet-4-6",
@@ -133,11 +119,11 @@ class TestClaudeDispatch:
         mocks.mock_genai_cls.assert_not_called()
 
     def test_claude_opus_prefix_dispatches_to_anthropic(self):
-        config = _make_config(model_id="claude-opus-4", google_cloud_location="us-east5")
+        env = {"GOOGLE_CLOUD_PROJECT": "test-project", "GOOGLE_CLOUD_LOCATION": "us-east5"}
 
-        with _MockLangchainModules() as mocks:
+        with _MockLangchainModules() as mocks, patch.dict(os.environ, env):
             from src.model_adapter import get_model
-            get_model(config)
+            get_model("claude-opus-4")
 
         mocks.mock_anthropic_cls.assert_called_once()
         call_kwargs = mocks.mock_anthropic_cls.call_args.kwargs
@@ -146,82 +132,109 @@ class TestClaudeDispatch:
 
 
 class TestDefaultModelId:
-    """Unset MODEL_ID defaults to claude-sonnet-4-6, dispatching to ChatAnthropicVertex."""
+    """Unset MODEL_ID defaults to gemini-2.0-flash, dispatching to ChatGoogleGenerativeAI."""
 
-    def test_default_model_id_dispatches_to_anthropic(self):
-        default_config = _make_config(model_id="claude-sonnet-4-6", google_cloud_location="us-east5")
+    def test_default_model_id_dispatches_to_gemini(self):
+        env = {
+            "GOOGLE_CLOUD_PROJECT": "test-project",
+            "GOOGLE_CLOUD_LOCATION": "global",
+        }
+        # Ensure MODEL_ID is not set
+        env_without_model_id = {k: v for k, v in os.environ.items() if k != "MODEL_ID"}
+        env_without_model_id.update(env)
 
         with _MockLangchainModules() as mocks:
-            with patch("src.config.get_config", return_value=default_config):
+            with patch.dict(os.environ, env_without_model_id, clear=True):
                 from src.model_adapter import get_model
                 get_model(None)
 
-        mocks.mock_anthropic_cls.assert_called_once()
-        call_kwargs = mocks.mock_anthropic_cls.call_args.kwargs
-        assert call_kwargs["model_name"] == "claude-sonnet-4-6"
-        mocks.mock_genai_cls.assert_not_called()
+        mocks.mock_genai_cls.assert_called_once()
+        call_kwargs = mocks.mock_genai_cls.call_args.kwargs
+        assert call_kwargs["model"] == "gemini-2.0-flash"
+        mocks.mock_anthropic_cls.assert_not_called()
+
+    def test_model_id_from_env_var_is_used(self):
+        env = {
+            "MODEL_ID": "gemini-2.5-pro",
+            "GOOGLE_CLOUD_PROJECT": "proj",
+            "GOOGLE_CLOUD_LOCATION": "global",
+        }
+
+        with _MockLangchainModules() as mocks, patch.dict(os.environ, env):
+            from src.model_adapter import get_model
+            get_model()  # no args — reads from env
+
+        mocks.mock_genai_cls.assert_called_once()
+        call_kwargs = mocks.mock_genai_cls.call_args.kwargs
+        assert call_kwargs["model"] == "gemini-2.5-pro"
 
 
 class TestUnsupportedPrefix:
     """Unsupported MODEL_ID prefixes raise ValueError with descriptive message."""
 
     def test_gpt_prefix_raises_value_error(self):
-        config = _make_config(model_id="gpt-4")
-
         with _MockLangchainModules():
             from src.model_adapter import get_model
             with pytest.raises(ValueError, match="gpt-4"):
-                get_model(config)
+                get_model("gpt-4")
 
     def test_error_message_mentions_supported_prefixes(self):
-        config = _make_config(model_id="llama-3")
-
         with _MockLangchainModules():
             from src.model_adapter import get_model
             with pytest.raises(ValueError, match="gemini.*claude"):
-                get_model(config)
+                get_model("llama-3")
 
     def test_empty_model_id_raises_value_error(self):
-        config = _make_config(model_id="")
-
         with _MockLangchainModules():
             from src.model_adapter import get_model
             with pytest.raises(ValueError):
-                get_model(config)
+                get_model("")
 
 
 class TestProjectAndLocationPassthrough:
-    """Project and location values are forwarded to the model constructors."""
+    """Project and location values from env are forwarded to the model constructors."""
 
     def test_project_passed_to_gemini(self):
-        config = _make_config(
-            model_id="gemini-2.0-flash",
-            google_cloud_project="my-real-project",
-            google_cloud_location="us-central1",
-        )
+        env = {
+            "GOOGLE_CLOUD_PROJECT": "my-real-project",
+            "GOOGLE_CLOUD_LOCATION": "us-central1",
+        }
 
-        with _MockLangchainModules() as mocks:
+        with _MockLangchainModules() as mocks, patch.dict(os.environ, env):
             from src.model_adapter import get_model
-            get_model(config)
+            get_model("gemini-2.0-flash")
 
         call_kwargs = mocks.mock_genai_cls.call_args.kwargs
         assert call_kwargs["project"] == "my-real-project"
         assert call_kwargs["location"] == "us-central1"
 
     def test_project_passed_to_claude(self):
-        config = _make_config(
-            model_id="claude-sonnet-4-6",
-            google_cloud_project="another-project",
-            google_cloud_location="europe-west1",
-        )
+        env = {
+            "GOOGLE_CLOUD_PROJECT": "another-project",
+            "GOOGLE_CLOUD_LOCATION": "europe-west1",
+        }
 
-        with _MockLangchainModules() as mocks:
+        with _MockLangchainModules() as mocks, patch.dict(os.environ, env):
             from src.model_adapter import get_model
-            get_model(config)
+            get_model("claude-sonnet-4-6")
 
         call_kwargs = mocks.mock_anthropic_cls.call_args.kwargs
         assert call_kwargs["project"] == "another-project"
         assert call_kwargs["location"] == "europe-west1"
+
+    def test_missing_project_env_uses_empty_string(self):
+        """GOOGLE_CLOUD_PROJECT not set — passes empty string to constructor."""
+        env_without = {k: v for k, v in os.environ.items()
+                       if k not in ("GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION")}
+
+        with _MockLangchainModules() as mocks:
+            with patch.dict(os.environ, env_without, clear=True):
+                from src.model_adapter import get_model
+                get_model("gemini-2.0-flash")
+
+        call_kwargs = mocks.mock_genai_cls.call_args.kwargs
+        assert call_kwargs["project"] == ""
+        assert call_kwargs["location"] == "global"
 
 
 @pytest.mark.integration
