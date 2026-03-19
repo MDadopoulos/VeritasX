@@ -12,6 +12,9 @@ Supported year patterns:
   - bare four-digit year (1939-2025)              -> calendar year
 
 US fiscal year: FY YYYY = October (YYYY-1) through September (YYYY).
+
+Corpus directory is read from the CORPUS_DIR environment variable.
+Falls back to ../corpus/transformed relative to this file if not set.
 """
 
 from __future__ import annotations
@@ -19,12 +22,11 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from langchain_core.tools import tool
-
-if TYPE_CHECKING:
-    from src.config import Config
+# ---------------------------------------------------------------------------
+# Corpus directory — read from environment, no Config parameter needed.
+# ---------------------------------------------------------------------------
+_CORPUS_DIR = Path(os.environ.get("CORPUS_DIR", str(Path(__file__).parent.parent.parent.parent / "corpus" / "transformed")))
 
 # Corpus date range constants
 _CORPUS_START_YEAR = 1939
@@ -142,13 +144,12 @@ def year_to_months(year: int) -> list[tuple[int, int]]:
     return [(year, m) for m in range(1, 13)]
 
 
-def _route_files_impl(question: str, config: "Config | None" = None) -> dict:
+def route_files(question: str) -> dict:
     """
     Extract year references from question and return matching bulletin file paths.
 
     Args:
         question: The user's question string.
-        config: Optional Config. If None, get_config() is called.
 
     Returns:
         On success:
@@ -160,17 +161,13 @@ def _route_files_impl(question: str, config: "Config | None" = None) -> dict:
         On no-year-found:
             {"error": "no_year_found", "question": question}
     """
-    if config is None:
-        from src.config import get_config
-        config = get_config()
-
     years = extract_years(question)
 
     if not years:
         return {"error": "no_year_found", "question": question}
 
     # Build the set of actual files in the corpus directory for validation.
-    corpus_dir = Path(config.corpus_dir)
+    corpus_dir = _CORPUS_DIR
     if corpus_dir.is_dir():
         actual_files = {f.name for f in corpus_dir.iterdir() if f.is_file()}
     else:
@@ -197,7 +194,7 @@ def _route_files_impl(question: str, config: "Config | None" = None) -> dict:
                 ordered_pairs.append(ym)
 
     # Cap at 12 pairs to avoid returning huge lists for multi-year questions.
-    ordered_pairs = ordered_pairs[:12]
+    #ordered_pairs = ordered_pairs[:12]
 
     # Construct filenames and validate against actual corpus.
     paths: list[str] = []
@@ -211,33 +208,3 @@ def _route_files_impl(question: str, config: "Config | None" = None) -> dict:
         "years_found": years,
         "fy_mapped": bool(fy_years),
     }
-
-
-# ---------------------------------------------------------------------------
-# @tool-decorated StructuredTool alias for create_deep_agent registration.
-# The config parameter is excluded from the schema — agent passes only question.
-# A thin wrapper without config is used so the tool schema stays simple.
-# ---------------------------------------------------------------------------
-
-
-def _route_files_agent(question: str) -> dict:
-    """
-    Extract year references from question and return matching bulletin file paths.
-
-    Args:
-        question: The user's question string.
-
-    Returns:
-        On success:
-            {
-                "paths": [list of absolute path strings that exist on disk],
-                "years_found": [list of {"year": int, "type": str} dicts],
-                "fy_mapped": bool
-            }
-        On no-year-found:
-            {"error": "no_year_found", "question": question}
-    """
-    return _route_files_impl(question)
-
-
-route_files = tool("route_files")(_route_files_agent)

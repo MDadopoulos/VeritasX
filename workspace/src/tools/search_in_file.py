@@ -23,7 +23,6 @@ import re
 import os
 from pathlib import Path
 
-from langchain_core.tools import tool
 from rank_bm25 import BM25Okapi
 
 # ---------------------------------------------------------------------------
@@ -149,7 +148,7 @@ def build_spans(lines: list[str], window: int = 20) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def _search_in_file_impl(
+def search_in_file(
     file_path: str,
     query: str,
     top_k: int = 5,
@@ -251,10 +250,3 @@ def _search_in_file_impl(
         "file": file_path,
         "spans_searched": len(spans),
     }
-
-
-# ---------------------------------------------------------------------------
-# @tool-decorated StructuredTool alias for create_deep_agent registration.
-# ---------------------------------------------------------------------------
-
-search_in_file = tool("search_in_file")(_search_in_file_impl)

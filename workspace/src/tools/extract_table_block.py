@@ -15,8 +15,6 @@ from __future__ import annotations
 
 import re
 
-from langchain_core.tools import tool
-
 # ---------------------------------------------------------------------------
 # Unit annotation regex
 # Matches: "(In millions of dollars)", "(Cumulative - in thousands of units)", etc.
@@ -111,7 +109,7 @@ def _collect_table_block(lines: list[str], table_start: int) -> dict:
     }
 
 
-def _extract_table_block_impl(span_text: str, anchor: str) -> dict:
+def extract_table_block(span_text: str, anchor: str) -> dict:
     """
     Extract all pipe-delimited table blocks from span_text near an anchor phrase.
 
@@ -184,10 +182,3 @@ def _extract_table_block_impl(span_text: str, anchor: str) -> dict:
         }
 
     return {"tables": tables}
-
-
-# ---------------------------------------------------------------------------
-# @tool-decorated StructuredTool alias for create_deep_agent registration.
-# ---------------------------------------------------------------------------
-
-extract_table_block = tool("extract_table_block")(_extract_table_block_impl)

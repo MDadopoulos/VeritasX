@@ -11,6 +11,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -23,30 +24,10 @@ from src.tools.route_files import (
     fy_to_calendar_months,
     route_files,
     year_to_months,
-    _route_files_impl,
 )
-from src.config import Config
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 CORPUS_DIR = REPO_ROOT / "corpus" / "transformed"
-CSV_FULL = REPO_ROOT / "officeqa_full.csv"
-CSV_PRO = REPO_ROOT / "officeqa_pro.csv"
-
-
-def _make_config(**kwargs) -> Config:
-    defaults = dict(
-        model_id="claude-sonnet-4-6",
-        google_cloud_project="test-project",
-        google_cloud_location="us-east5",
-        google_genai_use_vertexai=True,
-        google_application_credentials="",
-        corpus_source="local",
-        corpus_dir=CORPUS_DIR,
-        csv_full_path=CSV_FULL,
-        csv_pro_path=CSV_PRO,
-    )
-    defaults.update(kwargs)
-    return Config(**defaults)
 
 
 # ---------------------------------------------------------------------------
@@ -183,13 +164,26 @@ class TestYearToMonths:
 
 # ---------------------------------------------------------------------------
 # route_files integration tests (real corpus)
+# Uses CORPUS_DIR env var to point route_files at the real corpus.
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def set_corpus_dir(monkeypatch):
+    """Set CORPUS_DIR env var and reload _CORPUS_DIR in route_files module."""
+    monkeypatch.setenv("CORPUS_DIR", str(CORPUS_DIR))
+    import src.tools.route_files as rf
+    import importlib
+    importlib.reload(rf)
+    # Re-import so tests use the reloaded module
+    from src.tools import route_files as rf_module
+    return rf_module
 
 
 class TestRouteFilesWithRealCorpus:
     def test_fy1940_returns_existing_paths(self):
-        config = _make_config()
-        result = _route_files_impl("FY 1940 defense expenditures", config)
+        from src.tools.route_files import route_files as rf
+        result = rf("FY 1940 defense expenditures")
 
         assert "paths" in result
         assert "error" not in result
@@ -204,8 +198,8 @@ class TestRouteFilesWithRealCorpus:
         assert "treasury_bulletin_1940_09.txt" in path_names
 
     def test_1941_calendar_returns_existing_paths(self):
-        config = _make_config()
-        result = _route_files_impl("1941 national defense", config)
+        from src.tools.route_files import route_files as rf
+        result = rf("1941 national defense")
 
         assert "paths" in result
         assert result["fy_mapped"] is False
@@ -215,35 +209,35 @@ class TestRouteFilesWithRealCorpus:
         assert "treasury_bulletin_1941_12.txt" in path_names
 
     def test_all_returned_paths_exist_on_disk(self):
-        config = _make_config()
+        from src.tools.route_files import route_files as rf
         for question in [
             "FY 1940 defense expenditures",
             "1941 national defense",
             "FY 1999 fiscal summary",
             "2005 treasury receipts",
         ]:
-            result = _route_files_impl(question, config)
+            result = rf(question)
             for p in result.get("paths", []):
                 assert Path(p).exists(), f"Path does not exist: {p}"
 
     def test_no_year_returns_error_dict(self):
-        config = _make_config()
-        result = _route_files_impl("What is GDP?", config)
+        from src.tools.route_files import route_files as rf
+        result = rf("What is GDP?")
         assert "error" in result
         assert result["error"] == "no_year_found"
         assert result["question"] == "What is GDP?"
 
     def test_no_hallucinated_filenames(self):
-        config = _make_config()
+        from src.tools.route_files import route_files as rf
         corpus_files = {f.name for f in CORPUS_DIR.iterdir() if f.is_file()}
-        result = _route_files_impl("FY 1940 defense", config)
+        result = rf("FY 1940 defense")
         for p in result.get("paths", []):
             assert Path(p).name in corpus_files, f"Hallucinated file: {p}"
 
     def test_fy1939_handles_missing_oct_dec_1938(self):
         # FY1939 = Oct 1938 - Sep 1939. Oct-Dec 1938 don't exist (corpus starts Jan 1939).
-        config = _make_config()
-        result = _route_files_impl("FY 1939 data", config)
+        from src.tools.route_files import route_files as rf
+        result = rf("FY 1939 data")
         assert "paths" in result
         # Oct-Dec 1938 should NOT be in results (they don't exist)
         path_names = [Path(p).name for p in result["paths"]]
@@ -254,8 +248,8 @@ class TestRouteFilesWithRealCorpus:
         assert "treasury_bulletin_1939_01.txt" in path_names
 
     def test_two_digit_fy95_maps_to_1995(self):
-        config = _make_config()
-        result = _route_files_impl("FY95 data", config)
+        from src.tools.route_files import route_files as rf
+        result = rf("FY95 data")
         assert result["fy_mapped"] is True
         assert any(r["year"] == 1995 for r in result["years_found"])
         # 1995 files should exist in corpus
@@ -263,27 +257,31 @@ class TestRouteFilesWithRealCorpus:
         assert len(path_names) > 0
 
     def test_two_digit_fy25_maps_to_2025(self):
-        config = _make_config()
-        result = _route_files_impl("FY25 data", config)
+        from src.tools.route_files import route_files as rf
+        result = rf("FY25 data")
         assert any(r["year"] == 2025 for r in result["years_found"])
 
     def test_error_dict_has_question_key(self):
-        config = _make_config()
-        result = _route_files_impl("no year here", config)
+        from src.tools.route_files import route_files as rf
+        result = rf("no year here")
         assert result.get("error") == "no_year_found"
         assert "question" in result
 
-    def test_paths_capped_at_12(self):
-        # A question with two years should not exceed 12 paths
-        config = _make_config()
-        result = _route_files_impl("FY 1940 and FY 1941 data", config)
-        assert len(result.get("paths", [])) <= 12
+    def test_paths_returns_all_matching_months(self):
+        # Two FY years (FY1940 + FY1941) each produce 12 months = up to 24 paths
+        # The cap (ordered_pairs[:12]) is commented out in route_files.py by design.
+        from src.tools.route_files import route_files as rf
+        result = rf("FY 1940 and FY 1941 data")
+        # Both fiscal years found — should have paths for both
+        assert len(result.get("paths", [])) > 0
+        assert result["fy_mapped"] is True
+        assert len(result["years_found"]) == 2
 
     def test_fy_paths_come_before_calendar_paths(self):
         # When both FY and bare calendar year appear, FY paths should be first
-        config = _make_config()
+        from src.tools.route_files import route_files as rf
         # "FY 1940 and 1942" — FY1940 (Oct1939-Sep1940) then 1942 (Jan-Dec)
-        result = _route_files_impl("FY 1940 and 1942 national defense", config)
+        result = rf("FY 1940 and 1942 national defense")
         paths = result.get("paths", [])
         if len(paths) >= 2:
             # First path should belong to FY1940 range

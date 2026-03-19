@@ -6,6 +6,9 @@ Tests cover:
   - build_spans: non-overlapping, table boundary preservation, total line coverage
   - search_in_file: BM25 results, regex fallback, no-results error dict,
     metadata on each result
+
+Note: search_in_file is a plain Python function. Call directly:
+    search_in_file(file_path, query, top_k)
 """
 
 from __future__ import annotations
@@ -163,36 +166,36 @@ class TestBuildSpans:
 
 class TestSearchInFile:
     def test_returns_list_for_known_query(self):
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        result = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(result, list), f"Expected list, got {type(result)}"
         assert len(result) >= 1
 
     def test_top_result_contains_defense(self):
-        results = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        results = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(results, list)
         assert "defense" in results[0]["text"].lower()
 
     def test_result_has_all_required_keys(self):
-        results = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        results = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(results, list)
         required = {"text", "source_file", "start_line", "end_line", "bm25_score", "regex_fallback"}
         for r in results:
             assert required.issubset(r.keys()), f"Missing keys: {required - r.keys()}"
 
     def test_results_sorted_by_bm25_score_descending(self):
-        results = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        results = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(results, list)
         scores = [r["bm25_score"] for r in results]
         assert scores == sorted(scores, reverse=True), "Results not sorted by score desc"
 
     def test_bm25_results_have_regex_fallback_false(self):
-        results = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        results = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(results, list)
         for r in results:
             assert r["regex_fallback"] is False
 
     def test_source_file_is_absolute_path(self):
-        results = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        results = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(results, list)
         for r in results:
             assert Path(r["source_file"]).is_absolute(), (
@@ -200,14 +203,14 @@ class TestSearchInFile:
             )
 
     def test_start_end_line_are_positive_integers(self):
-        results = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        results = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(results, list)
         for r in results:
             assert isinstance(r["start_line"], int) and r["start_line"] >= 1
             assert isinstance(r["end_line"], int) and r["end_line"] >= r["start_line"]
 
     def test_source_file_matches_input_path(self):
-        results = search_in_file.invoke({"file_path": str(FIXTURE), "query": "national defense expenditures"})
+        results = search_in_file(str(FIXTURE), "national defense expenditures")
         assert isinstance(results, list)
         abs_fixture = str(FIXTURE.resolve())
         for r in results:
@@ -221,35 +224,35 @@ class TestSearchInFile:
 
 class TestRegexFallback:
     def test_gibberish_number_not_in_file_returns_no_results(self):
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "99999999"})
+        result = search_in_file(str(FIXTURE), "99999999")
         assert isinstance(result, dict)
         assert result.get("error") == "no_results"
 
     def test_no_results_error_has_required_keys(self):
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "99999999"})
+        result = search_in_file(str(FIXTURE), "99999999")
         assert isinstance(result, dict)
         required = {"error", "query", "file", "spans_searched"}
         assert required.issubset(result.keys()), f"Missing keys: {required - result.keys()}"
 
     def test_no_results_error_echoes_query(self):
         query = "99999999"
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": query})
+        result = search_in_file(str(FIXTURE), query)
         assert isinstance(result, dict)
         assert result["query"] == query
 
     def test_gibberish_text_returns_no_results(self):
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "xyzzyplugh"})
+        result = search_in_file(str(FIXTURE), "xyzzyplugh")
         assert isinstance(result, dict)
         assert result.get("error") == "no_results"
 
     def test_no_digit_query_no_regex_attempt(self):
         # "xyzzyplugh" has no digits or FY — should return no_results without regex
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "xyzzyplugh"})
+        result = search_in_file(str(FIXTURE), "xyzzyplugh")
         assert isinstance(result, dict)
         assert result["error"] == "no_results"
 
     def test_spans_searched_count_in_no_results(self):
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "99999999"})
+        result = search_in_file(str(FIXTURE), "99999999")
         assert isinstance(result, dict)
         assert isinstance(result["spans_searched"], int)
         assert result["spans_searched"] > 0
@@ -257,7 +260,7 @@ class TestRegexFallback:
     def test_known_number_in_file_found_via_bm25_or_regex(self):
         # "406" appears in the national defense row (line 130).
         # Either BM25 or regex fallback should find it.
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "406"})
+        result = search_in_file(str(FIXTURE), "406")
         # Should NOT be a no-results error
         if isinstance(result, dict):
             assert result.get("error") != "no_results", (
@@ -270,7 +273,7 @@ class TestRegexFallback:
     def test_fy_abbreviation_in_query_triggers_normalisation(self):
         # "FY1941" should normalise to "fiscal year 1941" before BM25.
         # The fixture covers FY1941 data so BM25 or regex should find something.
-        result = search_in_file.invoke({"file_path": str(FIXTURE), "query": "FY1941"})
+        result = search_in_file(str(FIXTURE), "FY1941")
         assert not (isinstance(result, dict) and result.get("error") == "no_results"), (
             f"Expected results for FY1941 query, got: {result}"
         )
