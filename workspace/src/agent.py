@@ -189,3 +189,40 @@ def run_question(uid: str, question: str, config: "Config | None" = None) -> str
     )
 
     return result["messages"][-1].content
+
+
+def run_question_with_messages(
+    uid: str, question: str, config: "Config | None" = None
+) -> dict:
+    """
+    Orchestrate the per-question lifecycle and return both answer and full message list.
+
+    Identical lifecycle to run_question but returns a dict with both the final
+    answer string and the complete messages list for automated ordering assertions.
+
+    Returns:
+        {
+            "answer": str,           # final answer string from last message
+            "messages": list,        # full message list from agent result
+        }
+    """
+    from src.scratch import prepare_scratch
+
+    prepare_scratch(uid)
+    agent = create_agent(config)
+
+    user_message = (
+        f"Question UID: {uid}\n"
+        f"Scratch directory: {uid}/\n\n"
+        f"Question: {question}"
+    )
+
+    result = agent.invoke(
+        {"messages": [{"role": "user", "content": user_message}]},
+        config={"configurable": {"thread_id": uid}},
+    )
+
+    return {
+        "answer": result["messages"][-1].content,
+        "messages": result["messages"],
+    }
