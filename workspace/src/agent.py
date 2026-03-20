@@ -15,8 +15,21 @@ from __future__ import annotations
 
 from pathlib import Path
 from dotenv import load_dotenv
+from typing import Any
 
 load_dotenv(Path(__file__).parent.parent / ".env")
+
+
+def _extract_text(content: Any) -> str:
+    """Extract plain text from a message content that may be a string or a list of content blocks."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            block["text"] for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+    return str(content)
 
 # ---------------------------------------------------------------------------
 # System prompt
@@ -42,9 +55,7 @@ After EACH search_in_file result, APPEND to {uid}/evidence.txt:
     Note: {why this span was selected}
     ---
 
-After EACH extract_table_block result, APPEND to {uid}/tables.txt:
-  Format: the raw table block as returned by the tool, followed by
-    ---
+
 
 After extracting numeric values from evidence/tables, WRITE to {uid}/extracted_values.txt:
   Format: one line per value: variable_name = value (unit)
@@ -145,7 +156,7 @@ def create_agent():
         tools=[
             route_files,
             search_in_file,
-            extract_table_block,
+            #extract_table_block,
             calculate,
             pct_change,
             sum_values,
@@ -205,7 +216,7 @@ def run_question(uid: str, question: str) -> str:
         config={"configurable": {"thread_id": uid}},
     )
 
-    return result["messages"][-1].content
+    return _extract_text(result["messages"][-1].content)
 
 
 def run_question_with_messages(uid: str, question: str) -> dict:
@@ -238,6 +249,6 @@ def run_question_with_messages(uid: str, question: str) -> dict:
     )
 
     return {
-        "answer": result["messages"][-1].content,
+        "answer": _extract_text(result["messages"][-1].content),
         "messages": result["messages"],
     }
