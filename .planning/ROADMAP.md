@@ -117,6 +117,17 @@ Plans:
 - [ ] 05-01-PLAN.md — Pydantic A2A schema models + FastAPI server (POST /run, GET /health, idempotency, concurrency, error handling)
 - [ ] 05-02-PLAN.md — Integration tests (10-question schema, idempotency, state isolation, error handling, health endpoint)
 
+### Phase 05.1: Enhance agent prompts, tools and AgentBeats A2A integration (INSERTED)
+
+**Goal:** Improve agent retrieval accuracy via prompt/docstring enhancements, replace FastAPI server with A2A-protocol-compliant server using a2a-sdk, and package as Docker container for AgentBeats registration
+**Depends on:** Phase 5
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05.1-01-PLAN.md — System prompt (FY Adjacency Rule, Parallel Search Rule) + tool docstring corpus hints
+- [ ] 05.1-02-PLAN.md — A2A server: executor.py + A2AStarletteApplication replacing FastAPI /run
+- [ ] 05.1-03-PLAN.md — Dockerfile + amber-manifest.json5 + human verification
+
 ### Phase 6: Hard Questions — Statistical + Multi-File
 **Goal**: The agent correctly answers the top-difficulty questions requiring statistical formulas or multi-bulletin time-series aggregation
 **Depends on**: Phase 5
