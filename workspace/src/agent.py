@@ -54,8 +54,8 @@ After EACH calculate/pct_change/sum_values result, APPEND to {uid}/calc.txt:
             defense_1941=3100 (millions) [source: treasury_bulletin_1941_03.txt]
     Result: 19.14%
 
-After completing all calculation, WRITE to {uid}/verification.txt:
-  Content: verification: pending (Phase 4)
+After completing all calculation, proceed to the Verification and Retry Protocol section below.
+verification.txt is managed by the verification protocol — do not write to it manually.
 
 After calling normalize_answer, WRITE to {uid}/answer.txt:
   Line 1: the normalized answer string
@@ -68,6 +68,40 @@ After calling normalize_answer, WRITE to {uid}/answer.txt:
 
 - NEVER compute percent change with inline arithmetic. ALWAYS use the pct_change tool.
 - NEVER generate arithmetic formulas inline. ALWAYS use calculate() for all arithmetic.
+
+## Verification and Retry Protocol
+
+Before calling normalize_answer, you MUST call the verifier subagent:
+  task(subagent_type="verifier", description="Verify answer for UID <uid>. Proposed answer: '<answer>'. Scratch directory: <uid>/. Check evidence coverage, unit consistency, arithmetic, and format. Return JSON with status, issues, token.")
+
+The verifier returns a JSON object with status, issues, and token.
+
+On PASS:
+  - Use the returned token as the verification_token argument to normalize_answer.
+  - Append the PASS result to verification.txt using the read-then-write pattern:
+    1. read_file("{uid}/verification.txt") to get current content (may be empty)
+    2. Concatenate: old_content + new attempt record
+    3. write_file("{uid}/verification.txt", combined_content)
+  - Format: "Attempt N: Status: PASS | Checks: evidence: PASS, arithmetic: PASS, units: PASS, format: PASS | Token: <token>\\n---\\n"
+
+On FAIL:
+  - Read the issues list to understand what failed.
+  - Perform targeted re-retrieval based on issues (e.g., unit FAIL -> re-retrieve the table with unit annotation; arithmetic FAIL -> re-check calc.txt expression).
+  - Append the FAIL result to verification.txt using the same read-then-write pattern.
+  - Retry the full answer derivation and call the verifier again.
+  - You have 3 total attempts (1 original + 2 retries).
+
+On ERROR (verifier crashed/timed out):
+  - Count this as a failed attempt. Same retry logic as FAIL.
+  - Append the ERROR result to verification.txt.
+
+After 3 failed attempts:
+  - Respond with EXACTLY: "cannot determine: [last verifier issues list]"
+  - The "cannot determine" response includes the last FAIL issues so callers can see why.
+  - Do NOT call normalize_answer with an unverified answer.
+  - Do NOT call the verifier again.
+
+Count attempts by the number of verification attempt records in verification.txt.
 """
 
 
@@ -97,6 +131,7 @@ def create_agent():
     from src.tools.extract_table_block import extract_table_block
     from src.tools.calculate import calculate, pct_change, sum_values
     from src.tools.normalize_answer import normalize_answer
+    from src.tools.verifier import VERIFIER_SUBAGENT_SPEC
 
     model = get_model()
 
@@ -111,6 +146,7 @@ def create_agent():
             sum_values,
             normalize_answer,
         ],
+        subagents=[VERIFIER_SUBAGENT_SPEC],
         system_prompt=SYSTEM_PROMPT,
         backend=FilesystemBackend(root_dir="./scratch", virtual_mode=False),
         checkpointer=MemorySaver(),
