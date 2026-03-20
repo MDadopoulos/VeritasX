@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 4 of 6 (Verifier Subagent + Reliability)
-Plan: 3 of 3 complete in Phase 4 (04-01, 04-02, 04-03 complete)
-Status: Phase 4 complete — verifier subagent, token gate, and test suite all in place
-Last activity: 2026-03-20 — Phase 4 Plan 03 complete
+Phase: 5 of 6 (A2A HTTP Server)
+Plan: 2 of 2 complete in Phase 5 (05-01, 05-02 complete — checkpoint:human-verify pending)
+Status: Phase 5 in progress — HTTP server + integration tests created, awaiting human verification
+Last activity: 2026-03-20 — Phase 5 Plan 02 complete (checkpoint)
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -30,6 +30,7 @@ Progress: [██████░░░░] 60%
 | 2: Extraction + Calculation Core | 3/3 | Complete |
 | 3: Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) |
 | 3.1: Architecture Refactor | 3/3 | Complete |
+| 5: A2A HTTP Server | 1/2 | In progress (05-01 complete) |
 
 **Execution Metrics:**
 
@@ -46,8 +47,10 @@ Progress: [██████░░░░] 60%
 | Phase 03.1-architecture-refactor P03 | 15min | 2 tasks | 4 files |
 | Phase 04-verifier-subagent-reliability P02 | 5min | 1 task | 1 file |
 | Phase 04-verifier-subagent-reliability P03 | 60min | 3 tasks | 3 files |
+| Phase 05-a2a-http-server P01 | 5min | 2 tasks | 3 files |
 
 *Updated after each plan completion*
+| Phase 05-a2a-http-server P02 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,6 +93,14 @@ Recent decisions affecting current work:
 - [Phase 04-02]: Verification gate is first check in function body, before all other validation — cannot be bypassed by passing bad raw input first
 - [Phase 04-03]: test_normalize_answer.py updated via AST-based bracket-depth-tracking replacement — handles commas inside arguments (list literals, comma-decimals, date strings) correctly where naive regex failed
 - [Phase 04-03]: test_smoke_verification_txt_is_stub renamed to test_smoke_verification_txt_has_records — checks PASS/FAIL/Status:/Attempt indicators instead of "pending"/"Phase 4" stub
+- [Phase 05-01]: asyncio primitives (Semaphore, Lock) created inside lifespan(), never at module level — avoids Python 3.10+ DeprecationWarning
+- [Phase 05-01]: get_model() called once in lifespan startup and stored in _app_state["model"] — LLM object shared across requests (HTTP-01); agent graph still created per-request for MemorySaver isolation
+- [Phase 05-01]: Idempotency cache checked BEFORE acquiring UID lock and semaphore — avoids holding concurrency slots for cache hits (fast path)
+- [Phase 05-01]: ErrorResponse uid field omitted entirely (not null) when uid not parseable from malformed request body
+- [Phase 05-01]: LangSmith tracing activated via env vars only (LANGSMITH_TRACING=true) — no code wiring in server.py
+- [Phase 05-02]: asgi-lifespan LifespanManager required for FastAPI lifespan in httpx tests — ASGITransport alone does not trigger startup events
+- [Phase 05-02]: Patch src.agent.run_question not src.server.run_question — server imports at function call time
+- [Phase 05-02]: anyio plugin re-enabled in pytest.ini — removed -p no:anyio so @pytest.mark.anyio works
 
 ### Pending Todos
 
@@ -99,11 +110,11 @@ None yet.
 
 - [Phase 1]: Open question Q-2 — run corpus manifest diff (`set(csv_source_files) - set(corpus_files)`) before writing any retrieval code to surface missing files early
 - [Phase 1]: Open question Q-5 — confirm correct LangChain package for Claude on Vertex (`langchain-google-vertexai` ChatAnthropicVertex) in dev environment before finalizing ENV-03
-- [Phase 5]: Open question Q-1 — A2A schema must be confirmed from AgentBeats GitHub repo before writing Pydantic models; Phase 5 plan 05-01 is blocked until this is read
+- [Phase 5 RESOLVED]: A2A schema confirmed from project documents (not external URL) — POST /run with {uid, question} -> {uid, answer}; simplified variant, not full Google A2A JSON-RPC SDK
 
 ## Session Continuity
 
 Last session: 2026-03-20
-Stopped at: Completed 04-03-PLAN.md — verifier test suite created, test_agent.py Phase4-compatible, all 59 normalize_answer calls migrated to two-arg form
-Next: Phase 4 complete. Execute Phase 5 (A2A schema + evaluation pipeline).
+Stopped at: 05-02-PLAN.md — integration tests created, 9/9 passing, checkpoint:human-verify reached
+Next: Human verifies server + test suite, then Phase 5 complete. Phase 6 (evaluation pipeline).
 Resume file: None
