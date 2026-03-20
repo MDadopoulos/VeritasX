@@ -94,12 +94,12 @@ Plans:
   2. The verifier subagent returns `status: PASS` with a non-null `token` for a correctly-answered sample question; it returns `status: FAIL` with a specific `issues` list when given an answer where units are mismatched
   3. When the verifier returns `FAIL` or `ERROR`, the main agent retries retrieval or recalculation; after two failed attempts it returns a standardized "cannot determine" response rather than emitting an unverified answer
   4. A multi-era question (series name changed between decades) resolves correctly because the era-aware column header resolver maps both label variants to the same evidence span
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 04-01: Verifier subagent — `SubAgentMiddleware` registration, four-dimension checks (evidence coverage, unit consistency, arithmetic re-execution, format match), `VerifierResult` schema
-- [ ] 04-02: Verification gate on `normalize_answer` — `verification_token` argument, token generation on PASS only, error on absent token
-- [ ] 04-03: Retry logic + era-aware header resolver — main agent FAIL/ERROR handling, "cannot determine" fallback after 2 attempts, curated series-name variant mapping
+- [ ] 04-01-PLAN.md — Verifier subagent: verifier.py (VERIFIER_SUBAGENT_SPEC, system prompt, era resolver, token gen) + agent.py (subagents param, verification/retry protocol in SYSTEM_PROMPT)
+- [ ] 04-02-PLAN.md — Verification gate: normalize_answer.py (add mandatory verification_token parameter, ValueError on absent/null)
+- [ ] 04-03-PLAN.md — Tests: test_verifier.py (16 unit tests for helpers + gate), test_agent.py (update stub test for real verification records)
 
 ### Phase 5: A2A HTTP Server
 **Goal**: The agent is reachable via a single `POST /run` HTTP endpoint whose request/response schema exactly matches the AgentBeats A2A specification
@@ -151,4 +151,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-20 after Phase 3.1 Architecture Refactor complete*
+*Last updated: 2026-03-20 after Phase 4 planning complete*
