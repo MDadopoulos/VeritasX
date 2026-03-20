@@ -5,7 +5,7 @@ Runs 3 real questions through the agent, verifying all Phase 3 success criteria:
   1. Scratch file completeness (six files, all non-empty)
   2. Unit metadata present in extracted_values.txt
   3. Idempotent re-run (structural completeness, not answer equality)
-  4. verification.txt contains stub content for Phase 4
+  4. verification.txt contains real verification records from verifier subagent
   5. write_todos ToolMessage appears before first retrieval ToolMessage
 
 All tests are marked @pytest.mark.integration and require GOOGLE_CLOUD_PROJECT
@@ -173,8 +173,8 @@ def test_smoke_rerun_idempotent():
 @requires_vertex
 @pytest.mark.integration
 @pytest.mark.timeout(300)
-def test_smoke_verification_txt_is_stub():
-    """After any smoke run, verification.txt contains Phase 4 stub content."""
+def test_smoke_verification_txt_has_records():
+    """After any smoke run, verification.txt contains real verification attempt records."""
     from src.agent import run_question
 
     uid = Q1_UID
@@ -183,9 +183,13 @@ def test_smoke_verification_txt_is_stub():
     verification_path = SCRATCH_ROOT / uid / "verification.txt"
     assert verification_path.exists(), "verification.txt must exist after run"
 
-    content = verification_path.read_text(encoding="utf-8").strip().lower()
-    assert "pending" in content or "phase 4" in content, (
-        f"verification.txt must contain 'pending' or 'Phase 4', got: {content!r}"
+    content = verification_path.read_text(encoding="utf-8")
+    assert any(
+        indicator in content
+        for indicator in ("PASS", "FAIL", "Status:", "Attempt")
+    ), (
+        f"verification.txt must contain real verification records "
+        f"(PASS/FAIL/Status:/Attempt), got: {content!r}"
     )
 
 
