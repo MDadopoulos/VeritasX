@@ -22,7 +22,7 @@ from pathlib import Path
 # Constants
 # ---------------------------------------------------------------------------
 
-SCRATCH_ROOT = Path("./scratch")
+SCRATCH_ROOT = Path(__file__).parent.parent / "scratch"
 
 # The six expected scratch files written by the agent during a question run.
 SCRATCH_FILES = [

@@ -13,6 +13,8 @@ Public API:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 # ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
@@ -148,7 +150,7 @@ def create_agent():
         ],
         subagents=[VERIFIER_SUBAGENT_SPEC],
         system_prompt=SYSTEM_PROMPT,
-        backend=FilesystemBackend(root_dir="./scratch", virtual_mode=False),
+        backend=FilesystemBackend(root_dir=str(Path(__file__).parent.parent / "scratch"), virtual_mode=False),
         checkpointer=MemorySaver(),
     )
 
