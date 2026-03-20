@@ -111,12 +111,11 @@ Plans:
   3. An integration test posting 10 sample questions all return HTTP 200 with correct A2A schema and non-empty answer strings
   4. When `LANGSMITH_API_KEY` and `LANGSMITH_PROJECT` are set, every LLM call and tool invocation appears as a distinct span in the LangSmith trace for the corresponding question UID
   5. A state isolation test confirms that scratch files for question N contain no filenames or values from question N-1
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: Confirm A2A schema from AgentBeats benchmark GitHub repo; define Pydantic request/response models
-- [ ] 05-02: FastAPI server — `POST /run` endpoint, agent created once at startup, LangSmith tracing wiring
-- [ ] 05-03: Integration tests — 10-question schema assertion, idempotency test, state isolation test
+- [ ] 05-01-PLAN.md — Pydantic A2A schema models + FastAPI server (POST /run, GET /health, idempotency, concurrency, error handling)
+- [ ] 05-02-PLAN.md — Integration tests (10-question schema, idempotency, state isolation, error handling, health endpoint)
 
 ### Phase 6: Hard Questions — Statistical + Multi-File
 **Goal**: The agent correctly answers the top-difficulty questions requiring statistical formulas or multi-bulletin time-series aggregation
@@ -146,9 +145,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) | - |
 | 3.1. Architecture Refactor | 3/3 | Complete | 2026-03-20 |
 | 4. Verifier Subagent + Reliability | 3/3 | Complete | 2026-03-20 |
-| 5. A2A HTTP Server | 0/3 | Not started | - |
+| 5. A2A HTTP Server | 0/2 | Planned | - |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-20 after Phase 4 execution complete*
+*Last updated: 2026-03-20 after Phase 5 planning complete*
