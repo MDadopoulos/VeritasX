@@ -1,6 +1,8 @@
 """
 normalize_answer.py — Rule-based answer normalizer.
 
+Requires a verification_token from the verifier subagent — raises ValueError if absent.
+
 Formats raw calculator output to match benchmark answer format exactly.
 The normalizer is fundamentally a pass-through for format: its job is to
 clean whitespace and unicode, not to reformat numbers. The benchmark
@@ -41,7 +43,7 @@ _DATE_RE = re.compile(
 _UNICODE_MINUS = '\u2212'
 
 
-def normalize_answer(raw: str) -> dict:
+def normalize_answer(raw: str, verification_token: str) -> dict:
     """
     Normalize a raw answer string to match benchmark format exactly.
 
@@ -50,6 +52,9 @@ def normalize_answer(raw: str) -> dict:
     raw : str
         The raw answer string from the calculator or extracted from the corpus.
         Must be a non-empty string.
+    verification_token : str
+        Non-null token from the verifier subagent (sha256 hex prefix).
+        Raises ValueError if absent or null. Ensures verification cannot be bypassed.
 
     Returns
     -------
@@ -57,6 +62,13 @@ def normalize_answer(raw: str) -> dict:
         {"result": str} on success.
         {"error": "INVALID_INPUT", "reason": str} on invalid input.
     """
+    # --- Verification gate (must be FIRST, before any other logic) ---
+    if not verification_token:
+        raise ValueError(
+            "normalize_answer requires a non-null verification_token from the verifier. "
+            "Call task(subagent_type='verifier') first and pass its token."
+        )
+
     # --- Input validation ---
     if raw is None or not isinstance(raw, str):
         return {"error": "INVALID_INPUT", "reason": "raw must be a non-empty string"}
