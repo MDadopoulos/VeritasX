@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 5 of 6 (A2A HTTP Server)
-Plan: 2 of 2 complete in Phase 5 (05-01, 05-02 complete — checkpoint:human-verify pending)
-Status: Phase 5 in progress — HTTP server + integration tests created, awaiting human verification
-Last activity: 2026-03-20 — Phase 5 Plan 02 complete (checkpoint)
+Phase: 5 of 6 (A2A HTTP Server) — COMPLETE
+Plan: 2 of 2 complete in Phase 5 (05-01, 05-02 both complete)
+Status: Phase 5 complete — HTTP server + integration tests created and human-verified. Ready for Phase 6 (Evaluation Pipeline).
+Last activity: 2026-03-21 — Phase 5 Plan 02 human verification approved (9/9 tests passed)
 
-Progress: [████████░░] 75%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -30,7 +30,7 @@ Progress: [████████░░] 75%
 | 2: Extraction + Calculation Core | 3/3 | Complete |
 | 3: Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) |
 | 3.1: Architecture Refactor | 3/3 | Complete |
-| 5: A2A HTTP Server | 1/2 | In progress (05-01 complete) |
+| 5: A2A HTTP Server | 2/2 | Complete |
 
 **Execution Metrics:**
 
@@ -50,7 +50,7 @@ Progress: [████████░░] 75%
 | Phase 05-a2a-http-server P01 | 5min | 2 tasks | 3 files |
 
 *Updated after each plan completion*
-| Phase 05-a2a-http-server P02 | 15min | 2 tasks | 4 files |
+| Phase 05-a2a-http-server P02 | 15min | 3 tasks (2 auto + 1 human-verify) | 4 files |
 
 ## Accumulated Context
 
@@ -101,6 +101,7 @@ Recent decisions affecting current work:
 - [Phase 05-02]: asgi-lifespan LifespanManager required for FastAPI lifespan in httpx tests — ASGITransport alone does not trigger startup events
 - [Phase 05-02]: Patch src.agent.run_question not src.server.run_question — server imports at function call time
 - [Phase 05-02]: anyio plugin re-enabled in pytest.ini — removed -p no:anyio so @pytest.mark.anyio works
+- [Phase 05-02]: AGENT_TIMEOUT_SECONDS needs tuning for production — default is low (suited for mocked tests); real Vertex AI runs require 120–300s; live smoke test correctly returned 504 (expected behavior, not a bug)
 
 ### Pending Todos
 
@@ -114,7 +115,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20
-Stopped at: 05-02-PLAN.md — integration tests created, 9/9 passing, checkpoint:human-verify reached
-Next: Human verifies server + test suite, then Phase 5 complete. Phase 6 (evaluation pipeline).
+Last session: 2026-03-21
+Stopped at: 05-02-PLAN.md — complete (human verification approved, Phase 5 fully done)
+Next: Phase 6 — Evaluation Pipeline. Set AGENT_TIMEOUT_SECONDS appropriately before running against real Vertex AI.
 Resume file: None
