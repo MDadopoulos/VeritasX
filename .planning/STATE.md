@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Every answer must be traceable to a specific sentence or table cell in the local corpus — no hallucination, no web search, exact arithmetic.
-**Current focus:** Phase 3.1 — Architecture Refactor: Deep Agent Native Tools + Model-Agnostic Pipeline
+**Current focus:** Phase 4 — Verifier Subagent + Reliability
 
 ## Current Position
 
-Phase: 3.1 of 6 (Architecture Refactor — inserted after Phase 3) — COMPLETE
-Plan: 3 of 3 complete in Phase 3.1 (03.1-01, 03.1-02, 03.1-03 complete)
-Status: Phase 3.1 complete — all tests pass against plain-function API, model-switch integration test added, planning docs updated
-Last activity: 2026-03-20 — Phase 3.1 Plan 03 complete
+Phase: 4 of 6 (Verifier Subagent + Reliability)
+Plan: 2 of 3 complete in Phase 4 (04-01, 04-02 complete)
+Status: Phase 4 Plan 02 complete — normalize_answer now requires verification_token (VER-04 satisfied)
+Last activity: 2026-03-20 — Phase 4 Plan 02 complete
 
-Progress: [█████░░░░░] 50%
+Progress: [█████░░░░░] 55%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02 | Phase 3.1: 03.1-01, 03.1-02, 03.1-03) — 03-03 at checkpoint
-- Total execution time: 5 sessions
+- Total plans completed: 14 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02 | Phase 3.1: 03.1-01, 03.1-02, 03.1-03 | Phase 4: 04-01, 04-02) — 03-03 at checkpoint
+- Total execution time: 6 sessions
 
 **By Phase:**
 
@@ -44,6 +44,7 @@ Progress: [█████░░░░░] 50%
 | Phase 03.1-architecture-refactor P01 | 12min | 2 tasks | 11 files |
 | Phase 03.1-architecture-refactor P02 | 6min | 2 tasks | 3 files |
 | Phase 03.1-architecture-refactor P03 | 15min | 2 tasks | 4 files |
+| Phase 04-verifier-subagent-reliability P02 | 5min | 1 task | 1 file |
 
 *Updated after each plan completion*
 
@@ -83,6 +84,9 @@ Recent decisions affecting current work:
 - [Phase 03.1]: SYSTEM_PROMPT rewritten without RETRIEVAL_EXHAUSTED references
 - [Phase 03.1]: create_agent() has no parameters — calls get_model() with no args which reads env at call time
 - [Phase 03.1]: model-switch integration test added — asserts both gemini-2.0-flash and claude-sonnet-4-6 produce non-empty answers for same question
+- [Phase 04-02]: verification_token has no default value — Pydantic/JSON schema marks it required, LLM cannot omit it (Pitfall 2)
+- [Phase 04-02]: Falsy token raises ValueError (not error dict) — absent token is a programming error (bypass attempt), not a runtime data problem
+- [Phase 04-02]: Verification gate is first check in function body, before all other validation — cannot be bypassed by passing bad raw input first
 
 ### Pending Todos
 
@@ -97,6 +101,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-20
-Stopped at: Completed 03.1-03-PLAN.md — all tests pass, model-switch test added, STATE.md and ROADMAP.md updated
-Next: Phase 3.1 complete. Resume Phase 3 Plan 03 (03-03) which was paused at checkpoint awaiting human-verify, or proceed to Phase 4.
+Stopped at: Completed 04-02-PLAN.md — normalize_answer verification_token gate added (VER-04 satisfied)
+Next: Execute Phase 4 Plan 03 (04-03) — verifier subagent integration and reliability layer.
 Resume file: None
