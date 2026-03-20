@@ -145,10 +145,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Extraction + Calculation Core | 3/3 | Complete | 2026-03-18 |
 | 3. Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) | - |
 | 3.1. Architecture Refactor | 3/3 | Complete | 2026-03-20 |
-| 4. Verifier Subagent + Reliability | 0/3 | Not started | - |
+| 4. Verifier Subagent + Reliability | 3/3 | Complete | 2026-03-20 |
 | 5. A2A HTTP Server | 0/3 | Not started | - |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-20 after Phase 4 planning complete*
+*Last updated: 2026-03-20 after Phase 4 execution complete*

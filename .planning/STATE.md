@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Every answer must be traceable to a specific sentence or table cell in the local corpus — no hallucination, no web search, exact arithmetic.
-**Current focus:** Phase 4 — Verifier Subagent + Reliability
+**Current focus:** Phase 5 — A2A HTTP Server
 
 ## Current Position
 
