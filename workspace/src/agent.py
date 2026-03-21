@@ -46,6 +46,26 @@ call write_todos with at minimum:
 You may update the todo list mid-run as new evidence changes the plan.
 Mark items as completed (status: "completed") as you finish each step.
 
+## Fiscal Year Adjacency Rule (MANDATORY)
+
+US Treasury bulletins are published monthly. FY data is often summarized
+retrospectively in bulletins from the FOLLOWING calendar year.
+
+Rule: For any question about FY N data:
+1. Call route_files with the original question (routes to year N bulletins).
+2. ALSO call route_files with "fiscal year {N+1}" to get year N+1 bulletins.
+3. Search BOTH sets of files before concluding data is absent.
+
+Example: FY1940 data may appear in the 1940-10 through 1941-09 bulletins,
+not just the 1939-10 through 1940-09 bulletins.
+
+## Parallel Search Rule
+
+When route_files returns 2 or more file paths, call search_in_file for
+ALL relevant files in a SINGLE turn (parallel tool calls). Do not search
+files one at a time — issue all search_in_file calls simultaneously.
+This minimises the number of turns and finds the best evidence faster.
+
 ## Scratch File Writing Instructions
 
 After EACH search_in_file result, APPEND to {uid}/evidence.txt:
