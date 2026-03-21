@@ -1,0 +1,50 @@
+// AgentBeats registration manifest for OfficeQA Finance Agent
+// See: https://docs.agentbeats.dev/manifest/
+{
+  manifest_version: "0.1.0",
+
+  // Agent metadata
+  name: "OfficeQA Finance Agent",
+  description: "RAG agent over US Treasury bulletins (1939-2025). Answers fiscal/financial questions with exact arithmetic grounded in local corpus.",
+
+  // Configuration schema — env vars required at runtime
+  config_schema: {
+    properties: {
+      GOOGLE_CLOUD_PROJECT: {
+        type: "string",
+        description: "GCP project ID with Vertex AI API enabled",
+      },
+      MODEL_ID: {
+        type: "string",
+        description: "LLM model identifier (e.g., gemini-2.0-flash, claude-sonnet-4-6)",
+      },
+      GOOGLE_APPLICATION_CREDENTIALS: {
+        type: "string",
+        description: "Path to GCP service account JSON key file",
+      },
+    },
+    required: ["GOOGLE_CLOUD_PROJECT"],
+  },
+
+  // Docker program definition
+  program: {
+    image: "ghcr.io/YOUR_ORG/officeqa-agent:latest",  // TODO: update with actual registry
+    entrypoint: ["python", "-m", "src.server"],
+    env: {
+      GOOGLE_CLOUD_PROJECT: "$config.GOOGLE_CLOUD_PROJECT",
+      MODEL_ID: "$config.MODEL_ID",
+      GOOGLE_APPLICATION_CREDENTIALS: "$config.GOOGLE_APPLICATION_CREDENTIALS",
+    },
+    network: {
+      endpoints: [{ port: 9009 }],
+    },
+  },
+
+  // A2A endpoint declaration
+  provides: {
+    a2a_endpoint: { port: 9009 },
+  },
+  exports: {
+    a2a_endpoint: "a2a_endpoint",
+  },
+}
