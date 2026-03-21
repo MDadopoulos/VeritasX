@@ -90,6 +90,10 @@ def calculate(expr: str) -> dict:
     """
     Evaluate an arithmetic expression safely using an AST whitelist.
 
+    CORPUS CONTEXT: Use this for ALL arithmetic on values extracted from
+    Treasury bulletins. Never compute arithmetic inline — always use this tool.
+    Supports standard operators (+, -, *, /, **, %) on integer/decimal literals.
+
     Only literals and the operators +, -, *, /, **, % and parentheses are
     permitted. Function calls, attribute access, imports, and any other Python
     construct are rejected with DISALLOWED_NODE.
@@ -134,6 +138,9 @@ def calculate(expr: str) -> dict:
 def pct_change(old: float, new: float, unit_old: Optional[str] = None, unit_new: Optional[str] = None) -> dict:
     """
     Calculate (new - old) / old * 100 rounded to 2 decimal places.
+
+    CORPUS CONTEXT: Use this for ALL percent change calculations between
+    Treasury bulletin values. Never compute percent change inline.
 
     Accepts any numeric type for old and new (str, int, float, Decimal).
     All values are converted internally to Decimal via str() to avoid float
@@ -188,6 +195,10 @@ _UNIT_RE = re.compile(r"\b(millions?|billions?|thousands?)\b", re.IGNORECASE)
 def sum_values(pairs: list, expected_count: int) -> dict:
     """
     Sum a list of (label, value) pairs, enforcing an expected count.
+
+    CORPUS CONTEXT: Use this to sum multiple values extracted from Treasury
+    bulletin tables (e.g., monthly totals). Always include units from the
+    table header (e.g., "millions").
 
     If the number of pairs does not match expected_count, returns COUNT_MISMATCH.
     If a value cannot be converted to Decimal, returns INVALID_INPUT.

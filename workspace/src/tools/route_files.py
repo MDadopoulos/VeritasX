@@ -148,6 +148,15 @@ def route_files(question: str) -> dict:
     """
     Extract year references from question and return matching bulletin file paths.
 
+    CORPUS STRUCTURE: Bulletins are named treasury_bulletin_{YEAR}_{MONTH:02d}.txt
+    covering January 1939 through September 2025 (697 files). FY N spans
+    October of year N-1 through September of year N.
+    IMPORTANT: FY N summaries are often published RETROSPECTIVELY in bulletins
+    from year N+1. Always call route_files a second time for year N+1 when
+    searching for FY N annual totals (e.g., for FY1940, also check 1941 bulletins).
+    Call this tool BEFORE search_in_file. Use returned paths as inputs to
+    search_in_file.
+
     Args:
         question: The user's question string.
 

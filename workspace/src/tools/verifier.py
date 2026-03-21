@@ -44,6 +44,10 @@ def resolve_era_column_header(
     """
     Fuzzy-match a target series name against a list of candidate column headers.
 
+    CORPUS CONTEXT: The verifier checks evidence from Treasury bulletin
+    corpus files. It validates unit consistency (millions vs billions),
+    arithmetic correctness, evidence coverage, and answer format.
+
     Used for multi-era questions where the same data series may have slightly
     different column header wording across document vintages (e.g., "National
     defense and related activities" vs "National defense and associated activities").

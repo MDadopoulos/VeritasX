@@ -47,6 +47,10 @@ def normalize_answer(raw: str, verification_token: str) -> dict:
     """
     Normalize a raw answer string to match benchmark format exactly.
 
+    USAGE: Call this ONLY after the verifier returns PASS and provides a
+    verification_token. The token is mandatory — calling without it raises
+    ValueError. Pass the raw calculated answer string and the token.
+
     Parameters
     ----------
     raw : str

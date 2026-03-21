@@ -156,6 +156,19 @@ def search_in_file(
     """
     Search a bulletin file for the most relevant spans using BM25.
 
+    CORPUS STRUCTURE: Each bulletin file contains markdown-formatted tables
+    delimited by pipe characters (|). Spans are 20-line windows; tables are
+    never split mid-row. Unit annotations appear as "(In millions of dollars)"
+    or similar text above table headers.
+
+    PARALLEL CALL GUIDANCE: When route_files returns multiple file paths,
+    call search_in_file for ALL files in a SINGLE turn (parallel tool calls).
+    Do NOT call sequentially — issue all calls simultaneously.
+
+    QUERY TIPS: Include the series name and year in your query (e.g.,
+    "defense expenditures 1940"). For FY totals, also try "fiscal year"
+    and "annual". Numeric-only queries fall back to regex automatically.
+
     Args:
         file_path: Path to the bulletin text file.
         query: The search query (will be normalised internally).
