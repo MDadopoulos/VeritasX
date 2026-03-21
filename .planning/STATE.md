@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Every answer must be traceable to a specific sentence or table cell in the local corpus — no hallucination, no web search, exact arithmetic.
-**Current focus:** Phase 5 — A2A HTTP Server
+**Current focus:** Phase 5.1 — Enhance Agent Prompts, Tools and AgentBeats A2A Integration
 
 ## Current Position
 
-Phase: 5 of 6 (A2A HTTP Server) — COMPLETE
-Plan: 2 of 2 complete in Phase 5 (05-01, 05-02 both complete)
-Status: Phase 5 complete — HTTP server + integration tests created and human-verified. Ready for Phase 6 (Evaluation Pipeline).
-Last activity: 2026-03-21 — Phase 5 Plan 02 human verification approved (9/9 tests passed)
+Phase: 5.1 of 6 (Enhance Agent Prompts, Tools and AgentBeats A2A Integration) — IN PROGRESS
+Plan: 1 of 3 complete in Phase 5.1 (05.1-01 complete)
+Status: Phase 5.1 Plan 01 complete — FY Adjacency Rule + Parallel Search Rule added to SYSTEM_PROMPT; all 5 tool docstrings upgraded with corpus hints.
+Last activity: 2026-03-21 — Phase 5.1 Plan 01 complete (2 tasks, 6 files, 394 unit tests pass)
 
 Progress: [█████████░] 85%
 
@@ -31,6 +31,7 @@ Progress: [█████████░] 85%
 | 3: Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) |
 | 3.1: Architecture Refactor | 3/3 | Complete |
 | 5: A2A HTTP Server | 2/2 | Complete |
+| 5.1: Enhance Agent Prompts + Tools | 1/3 | In progress |
 
 **Execution Metrics:**
 
@@ -51,12 +52,14 @@ Progress: [█████████░] 85%
 
 *Updated after each plan completion*
 | Phase 05-a2a-http-server P02 | 15min | 3 tasks (2 auto + 1 human-verify) | 4 files |
+| Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P01 | 4min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
 - Phase 3.1 inserted after Phase 3: Architecture Refactor: Deep Agent Native Tools + Model-Agnostic Pipeline (URGENT)
+- Phase 5.1 inserted after Phase 5: Enhance agent prompts, tools and AgentBeats A2A integration (URGENT)
 
 ### Decisions
 
@@ -102,6 +105,8 @@ Recent decisions affecting current work:
 - [Phase 05-02]: Patch src.agent.run_question not src.server.run_question — server imports at function call time
 - [Phase 05-02]: anyio plugin re-enabled in pytest.ini — removed -p no:anyio so @pytest.mark.anyio works
 - [Phase 05-02]: AGENT_TIMEOUT_SECONDS needs tuning for production — default is low (suited for mocked tests); real Vertex AI runs require 120–300s; live smoke test correctly returned 504 (expected behavior, not a bug)
+- [Phase 05.1]: FY Adjacency Rule inserted in SYSTEM_PROMPT — agent must call route_files twice for FY N questions (year N + year N+1)
+- [Phase 05.1]: Parallel Search Rule added to SYSTEM_PROMPT — search_in_file must be called for all paths in a single turn
 
 ### Pending Todos
 
@@ -116,6 +121,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-21
-Stopped at: 05-02-PLAN.md — complete (human verification approved, Phase 5 fully done)
-Next: Phase 6 — Evaluation Pipeline. Set AGENT_TIMEOUT_SECONDS appropriately before running against real Vertex AI.
+Stopped at: 05.1-01-PLAN.md — complete (FY Adjacency Rule + Parallel Search Rule in SYSTEM_PROMPT; all 5 tool docstrings upgraded)
+Next: Phase 5.1 Plan 02 (05.1-02-PLAN.md)
 Resume file: None
