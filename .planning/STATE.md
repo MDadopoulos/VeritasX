@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Every answer must be traceable to a specific sentence or table cell in the local corpus — no hallucination, no web search, exact arithmetic.
-**Current focus:** Phase 5.1 — Enhance Agent Prompts, Tools and AgentBeats A2A Integration
+**Current focus:** Phase 6 — Advanced Statistics and Hard Questions (next phase)
 
 ## Current Position
 
-Phase: 5.1 of 6 (Enhance Agent Prompts, Tools and AgentBeats A2A Integration) — IN PROGRESS
-Plan: 2 of 3 complete in Phase 5.1 (05.1-01, 05.1-02 complete)
-Status: Phase 5.1 Plan 02 complete — A2AStarletteApplication replaces FastAPI /run; OfficeQAAgentExecutor wraps run_question(); agent card + JSON-RPC + /health exposed.
-Last activity: 2026-03-21 — Phase 5.1 Plan 02 complete (2 tasks, 3 files)
+Phase: 5.1 of 6 (Enhance Agent Prompts, Tools and AgentBeats A2A Integration) — COMPLETE
+Plan: 3 of 3 complete in Phase 5.1 (05.1-01, 05.1-02, 05.1-03 complete)
+Status: Phase 5.1 fully complete — FY Adjacency Rule + Parallel Search Rule in SYSTEM_PROMPT; all tool docstrings annotated; A2A server with agent card + JSON-RPC; Dockerfile + amber-manifest.json5 for AgentBeats registration. Human verified.
+Last activity: 2026-03-21 — Phase 5.1 Plan 03 complete (2 tasks, 2 files)
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -31,7 +31,7 @@ Progress: [█████████░] 85%
 | 3: Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) |
 | 3.1: Architecture Refactor | 3/3 | Complete |
 | 5: A2A HTTP Server | 2/2 | Complete |
-| 5.1: Enhance Agent Prompts + Tools | 2/3 | In progress |
+| 5.1: Enhance Agent Prompts + Tools | 3/3 | Complete |
 
 **Execution Metrics:**
 
@@ -54,6 +54,7 @@ Progress: [█████████░] 85%
 | Phase 05-a2a-http-server P02 | 15min | 3 tasks (2 auto + 1 human-verify) | 4 files |
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P01 | 4min | 2 tasks | 6 files |
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P02 | 15min | 2 tasks | 3 files |
+| Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P03 | 10min | 2 tasks (1 auto + 1 human-verify) | 2 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,9 @@ Recent decisions affecting current work:
 - [Phase 05.1-02]: A2AStarletteApplication.build(routes=[...]) passes routes kwarg to Starlette constructor — correct way to add /health
 - [Phase 05.1-02]: context.get_user_input() is the SDK helper for extracting text from A2A message parts — replaces manual TextPart traversal
 - [Phase 05.1-02]: a2a-sdk[http-server] extra required for sse-starlette — base install raises ImportError at A2AStarletteApplication init
+- [Phase 05.1-03]: Dockerfile uses python:3.11-slim-bookworm with pip (not uv) — matches requirements.txt, no pyproject.toml
+- [Phase 05.1-03]: Corpus not COPY'd into image — mounted as volume at runtime; commented-out COPY line documents the self-contained image alternative
+- [Phase 05.1-03]: amber-manifest.json5 image field uses placeholder YOUR_ORG — to be updated when container registry is configured
 
 ### Pending Todos
 
@@ -126,6 +130,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-21
-Stopped at: 05.1-02-PLAN.md — complete (A2AStarletteApplication replaces FastAPI; OfficeQAAgentExecutor created; agent card + JSON-RPC + /health)
-Next: Phase 5.1 Plan 03 (05.1-03-PLAN.md)
+Stopped at: 05.1-03-PLAN.md — complete (Dockerfile + amber-manifest.json5; Phase 5.1 fully complete)
+Next: Phase 6 — Advanced Statistics and Hard Questions
 Resume file: None
