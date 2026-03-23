@@ -124,9 +124,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 05.1-01-PLAN.md — System prompt (FY Adjacency Rule, Parallel Search Rule) + tool docstring corpus hints
-- [ ] 05.1-02-PLAN.md — A2A server: executor.py + A2AStarletteApplication replacing FastAPI /run
-- [ ] 05.1-03-PLAN.md — Dockerfile + amber-manifest.json5 + human verification
+- [x] 05.1-01-PLAN.md — System prompt (FY Adjacency Rule, Parallel Search Rule) + tool docstring corpus hints
+- [x] 05.1-02-PLAN.md — A2A server: executor.py + A2AStarletteApplication replacing FastAPI /run
+- [x] 05.1-03-PLAN.md — Dockerfile + amber-manifest.json5 + human verification
 
 ### Phase 6: Hard Questions — Statistical + Multi-File
 **Goal**: The agent correctly answers the top-difficulty questions requiring statistical formulas or multi-bulletin time-series aggregation
@@ -156,9 +156,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Agent Loop + Scratch Space | 2/3 + checkpoint | In progress (03-03 awaiting human-verify) | - |
 | 3.1. Architecture Refactor | 3/3 | Complete | 2026-03-20 |
 | 4. Verifier Subagent + Reliability | 3/3 | Complete | 2026-03-20 |
-| 5. A2A HTTP Server | 0/2 | Planned | - |
+| 5. A2A HTTP Server | 2/2 | Complete | 2026-03-21 |
+| 5.1. Enhance Agent Prompts + A2A Integration | 3/3 | Complete | 2026-03-23 |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-20 after Phase 5 planning complete*
+*Last updated: 2026-03-23 after Phase 5.1 complete*
