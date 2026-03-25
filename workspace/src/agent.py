@@ -1,12 +1,12 @@
 """
-agent.py — Agent factory, system prompt, and run_question entry point.
+agent.py — Agent system prompt and run_question entry point.
 
 Composes all Phase 1+2 tools into a functioning agent loop with scratch
 isolation, planning gate, and native Deep Agent turn management.
 
 Public API:
-    SYSTEM_PROMPT                           str   — System prompt enforcing agent behavior
-    create_agent()                                — Returns a fresh compiled CompiledGraph
+    SYSTEM_PROMPT                           str   — Orchestrator system prompt (trimmed; retrieval
+                                                    rules moved to search subagent in harness.py)
     run_question(uid, question)             str   — Orchestrates per-question lifecycle
     run_question_with_messages(uid, question) dict — Returns answer + full message list
 """
@@ -18,6 +18,8 @@ from dotenv import load_dotenv
 from typing import Any
 
 load_dotenv(Path(__file__).parent.parent / ".env")
+
+from src import harness  # noqa: E402 (after load_dotenv so env vars are set first)
 
 
 def _extract_text(content: Any) -> str:
@@ -38,46 +40,30 @@ def _extract_text(content: Any) -> str:
 SYSTEM_PROMPT: str = """\
 ## Mandatory Planning Gate
 
-Before calling ANY retrieval tool (route_files, search_in_file), you MUST first \
-call write_todos with at minimum:
+Before calling ANY tool, you MUST first call write_todos with at minimum:
 1. A restatement of the question as you understand it.
 2. Your planned tool call sequence in order.
 
 You may update the todo list mid-run as new evidence changes the plan.
 Mark items as completed (status: "completed") as you finish each step.
 
-## Fiscal Year Adjacency Rule (MANDATORY)
+## Retrieval via Search Agent
 
-US Treasury bulletins are published monthly. FY data is often summarized
-retrospectively in bulletins from the FOLLOWING calendar year.
+To retrieve financial data from the corpus, call the search agent:
+  task(subagent_type='search-agent', description='<plain English task>')
 
-Rule: For any question about FY N data:
-1. Call route_files with the original question (routes to year N bulletins).
-2. ALSO call route_files with "fiscal year {N+1}" to get year N+1 bulletins.
-3. Search BOTH sets of files before concluding data is absent.
+Example: task(subagent_type='search-agent',
+              description='Find defense expenditures for FY1940 across all relevant files')
 
-Example: FY1940 data may appear in the 1940-10 through 1941-09 bulletins,
-not just the 1939-10 through 1940-09 bulletins.
+The search agent handles fiscal year adjacency and parallel file searching automatically.
+It returns compact findings:
+  variable_name = value (unit), source: filename
 
-## Parallel Search Rule
-
-When route_files returns 2 or more file paths, call search_in_file for
-ALL relevant files in a SINGLE turn (parallel tool calls). Do not search
-files one at a time — issue all search_in_file calls simultaneously.
-This minimises the number of turns and finds the best evidence faster.
+Do NOT call route_files, search_in_file, or extract_table_block directly.
 
 ## Scratch File Writing Instructions
 
-After EACH search_in_file result, APPEND to {uid}/evidence.txt:
-  Format:
-    Source: {file_path}
-    {span_text}
-    Note: {why this span was selected}
-    ---
-
-
-
-After extracting numeric values from evidence/tables, WRITE to {uid}/extracted_values.txt:
+After receiving compact findings from the search agent, WRITE to {uid}/extracted_values.txt:
   Format: one line per value: variable_name = value (unit)
   Example: defense_1940 = 2602 (millions)
   EVERY numeric value MUST include its unit. If unit is unclear, write (unit unknown).
@@ -90,8 +76,7 @@ After EACH calculate/pct_change/sum_values result, APPEND to {uid}/calc.txt:
             defense_1941=3100 (millions) [source: treasury_bulletin_1941_03.txt]
     Result: 19.14%
 
-After completing all calculation, proceed to the Verification and Retry Protocol section below.
-verification.txt is managed by the verification protocol — do not write to it manually.
+After completing all calculations, call normalize_answer with your final answer string.
 
 After calling normalize_answer, WRITE to {uid}/answer.txt:
   Line 1: the normalized answer string
@@ -105,90 +90,13 @@ After calling normalize_answer, WRITE to {uid}/answer.txt:
 - NEVER compute percent change with inline arithmetic. ALWAYS use the pct_change tool.
 - NEVER generate arithmetic formulas inline. ALWAYS use calculate() for all arithmetic.
 
-## Verification and Retry Protocol
+## Verification
 
-Before calling normalize_answer, you MUST call the verifier subagent:
-  task(subagent_type="verifier", description="Verify answer for UID <uid>. Proposed answer: '<answer>'. Scratch directory: <uid>/. Check evidence coverage, unit consistency, arithmetic, and format. Return JSON with status, issues, token.")
+Before calling normalize_answer, call the verifier:
+  task(subagent_type='verifier', description='<answer> | Evidence: <summary>')
 
-The verifier returns a JSON object with status, issues, and token.
-
-On PASS:
-  - Use the returned token as the verification_token argument to normalize_answer.
-  - Append the PASS result to verification.txt using the read-then-write pattern:
-    1. read_file("{uid}/verification.txt") to get current content (may be empty)
-    2. Concatenate: old_content + new attempt record
-    3. write_file("{uid}/verification.txt", combined_content)
-  - Format: "Attempt N: Status: PASS | Checks: evidence: PASS, arithmetic: PASS, units: PASS, format: PASS | Token: <token>\\n---\\n"
-
-On FAIL:
-  - Read the issues list to understand what failed.
-  - Perform targeted re-retrieval based on issues (e.g., unit FAIL -> re-retrieve the table with unit annotation; arithmetic FAIL -> re-check calc.txt expression).
-  - Append the FAIL result to verification.txt using the same read-then-write pattern.
-  - Retry the full answer derivation and call the verifier again.
-  - You have 3 total attempts (1 original + 2 retries).
-
-On ERROR (verifier crashed/timed out):
-  - Count this as a failed attempt. Same retry logic as FAIL.
-  - Append the ERROR result to verification.txt.
-
-After 3 failed attempts:
-  - Respond with EXACTLY: "cannot determine: [last verifier issues list]"
-  - The "cannot determine" response includes the last FAIL issues so callers can see why.
-  - Do NOT call normalize_answer with an unverified answer.
-  - Do NOT call the verifier again.
-
-Count attempts by the number of verification attempt records in verification.txt.
+Only call normalize_answer after receiving a PASS from the verifier.
 """
-
-
-# ---------------------------------------------------------------------------
-# Agent factory
-# ---------------------------------------------------------------------------
-
-
-def create_agent():
-    """
-    Create and return a fresh compiled agent with all 7 tools registered.
-
-    Call this once per question (not once per module) to guarantee AGT-02
-    idempotency — each call creates a fresh MemorySaver checkpointer so no
-    state bleeds between questions.
-
-    Returns:
-        A compiled LangGraph agent (CompiledGraph) ready for .invoke().
-    """
-    from deepagents import create_deep_agent
-    from deepagents.backends import FilesystemBackend
-    from langgraph.checkpoint.memory import MemorySaver
-
-    from src.model_adapter import get_model
-    from src.tools.route_files import route_files
-    from src.tools.search_in_file import search_in_file
-    from src.tools.extract_table_block import extract_table_block
-    from src.tools.calculate import calculate, pct_change, sum_values
-    from src.tools.normalize_answer import normalize_answer
-    from src.tools.verifier import VERIFIER_SUBAGENT_SPEC
-
-    model = get_model()
-
-    agent = create_deep_agent(
-        model=model,
-        tools=[
-            route_files,
-            search_in_file,
-            #extract_table_block,
-            calculate,
-            pct_change,
-            sum_values,
-            normalize_answer,
-        ],
-        subagents=[VERIFIER_SUBAGENT_SPEC],
-        system_prompt=SYSTEM_PROMPT,
-        backend=FilesystemBackend(root_dir=str(Path(__file__).parent.parent / "scratch"), virtual_mode=False),
-        checkpointer=MemorySaver(),
-    )
-
-    return agent
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +130,7 @@ def run_question(uid: str, question: str) -> str:
 
     # Create a fresh agent — fresh MemorySaver per question
     # (Pitfall 1: MemorySaver does NOT reset on scratch dir wipe; must create new instance)
-    agent = create_agent()
+    agent = harness.create_harness_agent()
 
     # Prepend UID preamble so the agent knows which scratch subdirectory to write to
     user_message = (
@@ -255,7 +163,7 @@ def run_question_with_messages(uid: str, question: str) -> dict:
     from src.scratch import prepare_scratch
 
     prepare_scratch(uid)
-    agent = create_agent()
+    agent = harness.create_harness_agent()
 
     user_message = (
         f"Question UID: {uid}\n"
