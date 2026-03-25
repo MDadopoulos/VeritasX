@@ -9,18 +9,18 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 5.1 of 6 (Enhance Agent Prompts, Tools and AgentBeats A2A Integration) — COMPLETE
-Plan: 3 of 3 complete in Phase 5.1 (05.1-01, 05.1-02, 05.1-03 complete)
-Status: Phase 5.1 fully complete — FY Adjacency Rule + Parallel Search Rule in SYSTEM_PROMPT; all tool docstrings annotated; A2A server with agent card + JSON-RPC; Dockerfile + amber-manifest.json5 for AgentBeats registration. Human verified.
-Last activity: 2026-03-21 — Phase 5.1 Plan 03 complete (2 tasks, 2 files)
+Phase: 5.1.1 of 6 (Custom DeepAgents Harness: Graph-Level Control, Context Isolation, Subagent Search Pipeline)
+Plan: 1 of 1 complete in Phase 5.1.1 (05.1.1-01 complete)
+Status: Phase 5.1.1 Plan 01 complete — harness.py created with search-agent + verifier subagents; agent.py refactored; SYSTEM_PROMPT trimmed; smoke test passes.
+Last activity: 2026-03-25 — Phase 5.1.1 Plan 01 complete (3 tasks, 2 files)
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02 | Phase 3.1: 03.1-01, 03.1-02, 03.1-03 | Phase 4: 04-01, 04-02, 04-03) — 03-03 at checkpoint
-- Total execution time: 6 sessions
+- Total plans completed: 16 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02 | Phase 3.1: 03.1-01, 03.1-02, 03.1-03 | Phase 4: 04-01, 04-02, 04-03 | Phase 5.1.1: 05.1.1-01) — 03-03 at checkpoint
+- Total execution time: 7 sessions
 
 **By Phase:**
 
@@ -32,6 +32,7 @@ Progress: [█████████░] 90%
 | 3.1: Architecture Refactor | 3/3 | Complete |
 | 5: A2A HTTP Server | 2/2 | Complete |
 | 5.1: Enhance Agent Prompts + Tools | 3/3 | Complete |
+| 5.1.1: Custom DeepAgents Harness | 1/1 | Complete |
 
 **Execution Metrics:**
 
@@ -55,6 +56,7 @@ Progress: [█████████░] 90%
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P01 | 4min | 2 tasks | 6 files |
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P02 | 15min | 2 tasks | 3 files |
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P03 | 10min | 2 tasks (1 auto + 1 human-verify) | 2 files |
+| Phase 05.1.1-custom-deepagents-harness P01 | 4min | 3 tasks (2 feat + 1 smoke test) | 2 files |
 
 ## Accumulated Context
 
@@ -117,6 +119,11 @@ Recent decisions affecting current work:
 - [Phase 05.1-03]: Dockerfile uses python:3.11-slim-bookworm with pip (not uv) — matches requirements.txt, no pyproject.toml
 - [Phase 05.1-03]: Corpus not COPY'd into image — mounted as volume at runtime; commented-out COPY line documents the self-contained image alternative
 - [Phase 05.1-03]: amber-manifest.json5 image field uses placeholder YOUR_ORG — to be updated when container registry is configured
+- [Phase 05.1.1-01]: harness.py owns ORCHESTRATOR_SYSTEM_PROMPT (source of truth); agent.py SYSTEM_PROMPT kept in sync manually to avoid circular import
+- [Phase 05.1.1-01]: SubAgentMiddleware new API requires model + tools in every SubAgent dict — missing either raises ValueError
+- [Phase 05.1.1-01]: BASE_AGENT_PROMPT must be explicitly appended when calling create_agent() directly (create_deep_agent() did it transparently)
+- [Phase 05.1.1-01]: search-agent subagent name chosen; FY Adjacency Rule + Parallel Search Rule moved from orchestrator SYSTEM_PROMPT to search subagent system_prompt
+- [Phase 05.1.1-01]: Bare python on this machine resolves to system Python 3.12 (not venv) — use .venv/Scripts/python.exe for verification commands
 
 ### Pending Todos
 
@@ -130,7 +137,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21
-Stopped at: 05.1-03-PLAN.md — complete (Dockerfile + amber-manifest.json5; Phase 5.1 fully complete)
-Next: Phase 6 — Advanced Statistics and Hard Questions
+Last session: 2026-03-25
+Stopped at: 05.1.1-01-PLAN.md — complete (harness.py + agent.py refactor; Phase 5.1.1 Plan 01 done)
+Next: Phase 6 — Advanced Statistics and Hard Questions (or additional 05.1.1 plans if queued)
 Resume file: None
