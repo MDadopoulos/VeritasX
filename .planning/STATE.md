@@ -62,6 +62,7 @@ Progress: [█████████░] 90%
 
 - Phase 3.1 inserted after Phase 3: Architecture Refactor: Deep Agent Native Tools + Model-Agnostic Pipeline (URGENT)
 - Phase 5.1 inserted after Phase 5: Enhance agent prompts, tools and AgentBeats A2A integration (URGENT)
+- Phase 5.1.1 inserted after Phase 5.1: Custom DeepAgents harness: graph-level control, context isolation, subagent search pipeline (URGENT)
 
 ### Decisions
 
