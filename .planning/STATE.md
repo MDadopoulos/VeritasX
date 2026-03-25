@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Every answer must be traceable to a specific sentence or table cell in the local corpus — no hallucination, no web search, exact arithmetic.
-**Current focus:** Phase 6 — Advanced Statistics and Hard Questions (next phase)
+**Current focus:** Phase 6 — Advanced Statistics and Hard Questions
 
 ## Current Position
 

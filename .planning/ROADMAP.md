@@ -167,9 +167,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Verifier Subagent + Reliability | 3/3 | Complete | 2026-03-20 |
 | 5. A2A HTTP Server | 2/2 | Complete | 2026-03-21 |
 | 5.1. Enhance Agent Prompts + A2A Integration | 3/3 | Complete | 2026-03-23 |
-| 5.1.1. Custom DeepAgents Harness | 0/1 | Not started | - |
+| 5.1.1. Custom DeepAgents Harness | 1/1 | Complete | 2026-03-25 |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-25 after Phase 05.1.1 planning*
+*Last updated: 2026-03-25 after Phase 05.1.1 complete*
