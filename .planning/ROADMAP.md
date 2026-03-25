@@ -128,6 +128,15 @@ Plans:
 - [x] 05.1-02-PLAN.md — A2A server: executor.py + A2AStarletteApplication replacing FastAPI /run
 - [x] 05.1-03-PLAN.md — Dockerfile + amber-manifest.json5 + human verification
 
+### Phase 05.1.1: Custom DeepAgents harness: graph-level control, context isolation, subagent search pipeline (INSERTED)
+
+**Goal:** Replace `create_deep_agent()` with a custom harness (`harness.py`) that assembles the middleware stack manually and introduces a dedicated search subagent to isolate corpus retrieval from the orchestrator's context window.
+**Depends on:** Phase 05.1
+**Plans:** 1 plan
+
+Plans:
+- [ ] 05.1.1-01-PLAN.md — harness.py (middleware assembly, search subagent, verifier subagent) + agent.py refactor (remove create_agent, trim SYSTEM_PROMPT)
+
 ### Phase 6: Hard Questions — Statistical + Multi-File
 **Goal**: The agent correctly answers the top-difficulty questions requiring statistical formulas or multi-bulletin time-series aggregation
 **Depends on**: Phase 5
@@ -158,8 +167,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Verifier Subagent + Reliability | 3/3 | Complete | 2026-03-20 |
 | 5. A2A HTTP Server | 2/2 | Complete | 2026-03-21 |
 | 5.1. Enhance Agent Prompts + A2A Integration | 3/3 | Complete | 2026-03-23 |
+| 5.1.1. Custom DeepAgents Harness | 0/1 | Not started | - |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-23 after Phase 5.1 complete*
+*Last updated: 2026-03-25 after Phase 05.1.1 planning*
