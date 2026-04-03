@@ -117,6 +117,16 @@ Plans:
 - [ ] 05-01-PLAN.md — Pydantic A2A schema models + FastAPI server (POST /run, GET /health, idempotency, concurrency, error handling)
 - [ ] 05-02-PLAN.md — Integration tests (10-question schema, idempotency, state isolation, error handling, health endpoint)
 
+### Phase 05.2: Refactor working directory, agent logic, better subagents, skills and harness (INSERTED)
+
+**Goal:** Refactor existing components — no new capabilities. Swap FilesystemBackend for LocalShellBackend with env-var-driven root path, redesign search-agent to write evidence to scratch files instead of relaying inline, wire 3 pre-authored skill bundles via SkillsMiddleware.
+**Depends on:** Phase 5.1.1
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05.2-01-PLAN.md — LocalShellBackend + SCRATCH_DIR env var + scratch.py fix + SkillsMiddleware wiring
+- [ ] 05.2-02-PLAN.md — Search-agent file-writing pattern + orchestrator UID propagation + prompt sync
+
 ### Phase 05.1: Enhance agent prompts, tools and AgentBeats A2A integration (INSERTED)
 
 **Goal:** Improve agent retrieval accuracy via prompt/docstring enhancements, replace FastAPI server with A2A-protocol-compliant server using a2a-sdk, and package as Docker container for AgentBeats registration
@@ -168,8 +178,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 5. A2A HTTP Server | 2/2 | Complete | 2026-03-21 |
 | 5.1. Enhance Agent Prompts + A2A Integration | 3/3 | Complete | 2026-03-23 |
 | 5.1.1. Custom DeepAgents Harness | 1/1 | Complete | 2026-03-25 |
+| 5.2. Refactor Working Dir + Skills + Harness | 0/2 | Not started | - |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-03-25 after Phase 05.1.1 complete*
+*Last updated: 2026-04-04 after Phase 05.2 planning complete*
