@@ -13,11 +13,52 @@ Public API:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Portable scratch-directory resolution (replaces hardcoded Windows path)
+# ---------------------------------------------------------------------------
+_PROJECT_ROOT = Path(__file__).parent.parent.parent  # workspace/src/ -> workspace/ -> project root
+_DEFAULT_SCRATCH = _PROJECT_ROOT / "agentspace" / "scratch"
+SCRATCH_DIR = Path(os.environ.get("SCRATCH_DIR", str(_DEFAULT_SCRATCH)))
 
 # ---------------------------------------------------------------------------
 # Orchestrator system prompt (source of truth for harness)
 # ---------------------------------------------------------------------------
+BASE_AGENT_PROMPT = """You are a Deep Agent, an AI assistant that helps users accomplish tasks using tools. You respond with text and tool calls. The user can see your responses and tool outputs in real time.
+
+## Core Behavior
+
+- Be concise and direct. Don't over-explain unless asked.
+- NEVER add unnecessary preamble (\"Sure!\", \"Great question!\", \"I'll now...\").
+- Don't say \"I'll now do X\" — just do it.
+- If the request is ambiguous, ask questions before acting.
+- If asked how to approach something, explain first, then act.
+
+## Professional Objectivity
+
+- Prioritize accuracy over validating the user's beliefs
+- Disagree respectfully when the user is incorrect
+- Avoid unnecessary superlatives, praise, or emotional validation
+
+## Doing Tasks
+
+When the user asks you to do something:
+
+1. **Understand first** — read relevant files, check existing patterns. Quick but thorough — gather enough evidence to start, then iterate.
+2. **Act** — implement the solution. Work quickly but accurately.
+3. **Verify** — check your work against what was asked, not against your own output. Your first attempt is rarely correct — iterate.
+
+Keep working until the task is fully complete. Don't stop partway and explain what you would do — just do it. Only yield back to the user when the task is done or you're genuinely blocked.
+
+**When things go wrong:**
+- If something fails repeatedly, stop and analyze *why* — don't keep retrying the same approach.
+- If you're blocked, tell the user what's wrong and ask for guidance.
+
+## Progress Updates
+
+For longer tasks, provide brief progress updates at reasonable intervals — a concise sentence recapping what you've done and what's next."""  # noqa: E501
 
 ORCHESTRATOR_SYSTEM_PROMPT: str = """\
 ## Mandatory Planning Gate
@@ -147,21 +188,33 @@ def create_harness_agent():
     from langchain.agents import create_agent
     from langchain.agents.middleware import TodoListMiddleware
     from deepagents.middleware.filesystem import FilesystemMiddleware
+    from deepagents.middleware.skills import SkillsMiddleware
     from deepagents.middleware.subagents import SubAgentMiddleware, SubAgent
     from deepagents.middleware.summarization import create_summarization_middleware
     from deepagents.middleware.patch_tool_calls import PatchToolCallsMiddleware
     from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
-    from deepagents.graph import BASE_AGENT_PROMPT
-    from deepagents.backends import FilesystemBackend
+    from deepagents.backends import LocalShellBackend, FilesystemBackend
     from langgraph.checkpoint.memory import MemorySaver
+    from deepagents._version import __version__
 
     from src.model_adapter import get_model
 
-    # Step 1 — Model and backend
+    # Step 1 — Model and backend (env-var-driven, portable)
     model = get_model()
-    backend = FilesystemBackend(
-        root_dir=str((Path(__file__).parent.parent / "scratch").resolve()),
-        virtual_mode=False,
+
+    SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
+    backend = LocalShellBackend(
+        root_dir=SCRATCH_DIR,
+        virtual_mode=True,
+        inherit_env=True,
+    )
+
+    # Step 1b — Skills backend and middleware (orchestrator only)
+    _SKILLS_DIR = Path(os.environ.get("SKILLS_DIR", str(_PROJECT_ROOT / "skills")))
+    skills_backend = FilesystemBackend(root_dir=_SKILLS_DIR, virtual_mode=True)
+    skills_mw = SkillsMiddleware(
+        backend=skills_backend,
+        sources=["/quant-stats/", "/cpi-inflation-adjuster/", "/historical-fx/"],
     )
 
     # Step 2 — Import retrieval tools (search subagent only)
@@ -178,13 +231,16 @@ def create_harness_agent():
     from src.tools.verifier import VERIFIER_SYSTEM_PROMPT
 
     # Step 5 — Build search subagent middleware stack (exact order from graph.py)
+    # NOTE: No SkillsMiddleware — search-agent is a pure retrieval worker
     search_middleware = [
         TodoListMiddleware(),
+    ]
+    search_middleware.extend([
         FilesystemMiddleware(backend=backend),
         create_summarization_middleware(model, backend),
         PatchToolCallsMiddleware(),
         AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
-    ]
+    ])
 
     # Step 6 — Build search subagent spec (SubAgent TypedDict, new API)
     search_subagent: SubAgent = {
@@ -202,13 +258,16 @@ def create_harness_agent():
     }
 
     # Step 7 — Build verifier subagent middleware stack (exact order from graph.py)
+    # NOTE: No SkillsMiddleware — verifier is unchanged per locked decision
     verifier_middleware = [
         TodoListMiddleware(),
+    ]
+    verifier_middleware.extend([
         FilesystemMiddleware(backend=backend),
         create_summarization_middleware(model, backend),
         PatchToolCallsMiddleware(),
         AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
-    ]
+    ])
 
     # Step 8 — Build verifier subagent spec (VER-01: registered with name "verifier")
     verifier_subagent: SubAgent = {
@@ -223,9 +282,15 @@ def create_harness_agent():
         "middleware": verifier_middleware,
     }
 
+    ###CAN ADD GENERAL SUBAGENT AS WELL..abs
+
     # Step 9 — Build orchestrator middleware stack (exact order from graph.py)
+    # Skills on orchestrator ONLY (Claudie principle: orchestrator reasons, workers execute)
     orchestrator_middleware = [
         TodoListMiddleware(),
+        skills_mw,
+    ]
+    orchestrator_middleware.extend([
         FilesystemMiddleware(backend=backend),
         SubAgentMiddleware(
             backend=backend,
@@ -234,7 +299,15 @@ def create_harness_agent():
         create_summarization_middleware(model, backend),
         PatchToolCallsMiddleware(),
         AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
-    ]
+    ])
+
+    ###if want to add the rest later..
+    ##if middleware:
+    ##    deepagent_middleware.extend(middleware)
+    #  if memory is not None:
+    #     deepagent_middleware.append(MemoryMiddleware(backend=backend, sources=memory))
+    # if interrupt_on is not None:
+    #     deepagent_middleware.append(HumanInTheLoopMiddleware(interrupt_on=interrupt_on))
 
     # Step 10 — Combine system prompt (CRITICAL: create_agent() does NOT append BASE_AGENT_PROMPT)
     final_system_prompt = ORCHESTRATOR_SYSTEM_PROMPT + "\n\n" + BASE_AGENT_PROMPT
@@ -248,5 +321,15 @@ def create_harness_agent():
         middleware=orchestrator_middleware,
         system_prompt=final_system_prompt,
         checkpointer=MemorySaver(),
+        name="Office QA Agent",
+    ).with_config(
+        {
+            "recursion_limit": 10_001,
+            "metadata": {
+                "ls_integration": "deepagents",
+                "versions": {"deepagents": __version__},
+                "lc_agent_name": "Office QA Agent",
+            },
+        }
     )
     return agent
