@@ -49,24 +49,24 @@ Mark items as completed (status: "completed") as you finish each step.
 
 ## Retrieval via Search Agent
 
-To retrieve financial data from the corpus, call the search agent:
-  task(subagent_type='search-agent', description='<plain English task>')
+To retrieve financial data from the corpus, call the search agent with the UID prefix:
+  task(subagent_type='search-agent', description='UID: {uid} | Task: <plain English task>')
 
 Example: task(subagent_type='search-agent',
-              description='Find defense expenditures for FY1940 across all relevant files')
+              description='UID: UID0001 | Task: Find defense expenditures for FY1940 across all relevant files')
 
-The search agent handles fiscal year adjacency and parallel file searching automatically.
-It returns compact findings:
-  variable_name = value (unit), source: filename
+IMPORTANT: Every search-agent call MUST include 'UID: {uid} |' at the start of the description.
+The {uid} value comes from the question preamble ("Question UID: ...").
+
+The search agent writes evidence to {uid}/evidence.txt and extracted values to {uid}/extracted_values.txt.
+It returns ONLY a file pointer — do NOT expect inline data.
 
 Do NOT call route_files, search_in_file, or extract_table_block directly.
 
 ## Scratch File Writing Instructions
 
-After receiving compact findings from the search agent, WRITE to {uid}/extracted_values.txt:
-  Format: one line per value: variable_name = value (unit)
-  Example: defense_1940 = 2602 (millions)
-  EVERY numeric value MUST include its unit. If unit is unclear, write (unit unknown).
+After the search-agent completes, read {uid}/extracted_values.txt to get the values for calculation.
+EVERY numeric value MUST include its unit. If unit is unclear, write (unit unknown).
 
 After EACH calculate/pct_change/sum_values result, APPEND to {uid}/calc.txt:
   Format: expression, labeled inputs with source file, result
@@ -92,8 +92,8 @@ After calling normalize_answer, WRITE to {uid}/answer.txt:
 
 ## Verification
 
-Before calling normalize_answer, call the verifier:
-  task(subagent_type='verifier', description='<answer> | Evidence: <summary>')
+Before calling normalize_answer, call the verifier with the UID prefix:
+  task(subagent_type='verifier', description='UID: {uid} | <answer> | Evidence: <summary>')
 
 Only call normalize_answer after receiving a PASS from the verifier.
 """
