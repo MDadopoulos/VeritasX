@@ -178,9 +178,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 5. A2A HTTP Server | 2/2 | Complete | 2026-03-21 |
 | 5.1. Enhance Agent Prompts + A2A Integration | 3/3 | Complete | 2026-03-23 |
 | 5.1.1. Custom DeepAgents Harness | 1/1 | Complete | 2026-03-25 |
-| 5.2. Refactor Working Dir + Skills + Harness | 0/2 | Not started | - |
+| 5.2. Refactor Working Dir + Skills + Harness | 2/2 | Complete | 2026-04-04 |
 | 6. Hard Questions — Statistical + Multi-File | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-17*
-*Last updated: 2026-04-04 after Phase 05.2 planning complete*
+*Last updated: 2026-04-04 after Phase 05.2 complete*
