@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 5.1.1 of 6 (Custom DeepAgents Harness: Graph-Level Control, Context Isolation, Subagent Search Pipeline)
-Plan: 1 of 1 complete in Phase 5.1.1 (05.1.1-01 complete)
-Status: Phase 5.1.1 Plan 01 complete — harness.py created with search-agent + verifier subagents; agent.py refactored; SYSTEM_PROMPT trimmed; smoke test passes.
-Last activity: 2026-03-25 — Phase 5.1.1 Plan 01 complete (3 tasks, 2 files)
+Phase: 5.2 of 6 (Refactor Working Directory, Agent Logic, Better Subagents, Skills and Harness)
+Plan: 1 of 2 complete in Phase 5.2 (05.2-01 complete)
+Status: Phase 5.2 Plan 01 complete — LocalShellBackend replaces hardcoded FilesystemBackend; SkillsMiddleware wired to orchestrator; scratch.py aligned.
+Last activity: 2026-04-04 — Phase 5.2 Plan 01 complete (2 tasks, 2 files)
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -33,6 +33,7 @@ Progress: [█████████░] 92%
 | 5: A2A HTTP Server | 2/2 | Complete |
 | 5.1: Enhance Agent Prompts + Tools | 3/3 | Complete |
 | 5.1.1: Custom DeepAgents Harness | 1/1 | Complete |
+| 5.2: Refactor Working Dir + Skills + Harness | 1/2 | In progress |
 
 **Execution Metrics:**
 
@@ -57,6 +58,7 @@ Progress: [█████████░] 92%
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P02 | 15min | 2 tasks | 3 files |
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P03 | 10min | 2 tasks (1 auto + 1 human-verify) | 2 files |
 | Phase 05.1.1-custom-deepagents-harness P01 | 4min | 3 tasks (2 feat + 1 smoke test) | 2 files |
+| Phase 05.2 P01 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +67,7 @@ Progress: [█████████░] 92%
 - Phase 3.1 inserted after Phase 3: Architecture Refactor: Deep Agent Native Tools + Model-Agnostic Pipeline (URGENT)
 - Phase 5.1 inserted after Phase 5: Enhance agent prompts, tools and AgentBeats A2A integration (URGENT)
 - Phase 5.1.1 inserted after Phase 5.1: Custom DeepAgents harness: graph-level control, context isolation, subagent search pipeline (URGENT)
+- Phase 5.2 inserted after Phase 5: Refactor working directory, agent logic, better subagents, skills and harness (URGENT)
 
 ### Decisions
 
@@ -124,6 +127,9 @@ Recent decisions affecting current work:
 - [Phase 05.1.1-01]: BASE_AGENT_PROMPT must be explicitly appended when calling create_agent() directly (create_deep_agent() did it transparently)
 - [Phase 05.1.1-01]: search-agent subagent name chosen; FY Adjacency Rule + Parallel Search Rule moved from orchestrator SYSTEM_PROMPT to search subagent system_prompt
 - [Phase 05.1.1-01]: Bare python on this machine resolves to system Python 3.12 (not venv) — use .venv/Scripts/python.exe for verification commands
+- [Phase 05.2]: SkillsMiddleware on orchestrator only -- search-agent and verifier are pure workers (Claudie principle)
+- [Phase 05.2]: Separate FilesystemBackend for skills dir (read-only); LocalShellBackend for scratch (read-write + execute)
+- [Phase 05.2]: SCRATCH_DIR env var with _PROJECT_ROOT / agentspace / scratch default -- matches CORPUS_DIR pattern from config.py
 
 ### Pending Todos
 
@@ -137,7 +143,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25
-Stopped at: 05.1.1-01-PLAN.md — complete (harness.py + agent.py refactor; Phase 5.1.1 Plan 01 done)
-Next: Phase 6 — Advanced Statistics and Hard Questions (or additional 05.1.1 plans if queued)
+Last session: 2026-04-04
+Stopped at: Completed 05.2-01-PLAN.md
+Next: 05.2-02-PLAN.md (search-agent file-writing pattern + orchestrator prompt refactor)
 Resume file: None
