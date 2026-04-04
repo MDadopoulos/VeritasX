@@ -15,6 +15,7 @@ All functions return dicts on expected conditions (never raise for missing files
 Input validation raises ValueError for invalid uid.
 """
 
+import os
 import shutil
 from pathlib import Path
 
@@ -22,7 +23,9 @@ from pathlib import Path
 # Constants
 # ---------------------------------------------------------------------------
 
-SCRATCH_ROOT = Path(__file__).parent.parent / "scratch"
+_PROJECT_ROOT = Path(__file__).parent.parent.parent  # workspace/src/ -> workspace/ -> project root
+_DEFAULT_SCRATCH = _PROJECT_ROOT / "agentspace" / "scratch"
+SCRATCH_ROOT = Path(os.environ.get("SCRATCH_DIR", str(_DEFAULT_SCRATCH)))
 
 # The six expected scratch files written by the agent during a question run.
 SCRATCH_FILES = [
