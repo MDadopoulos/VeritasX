@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 5.2 of 6 (Refactor Working Directory, Agent Logic, Better Subagents, Skills and Harness)
-Plan: 1 of 2 complete in Phase 5.2 (05.2-01 complete)
-Status: Phase 5.2 Plan 01 complete — LocalShellBackend replaces hardcoded FilesystemBackend; SkillsMiddleware wired to orchestrator; scratch.py aligned.
-Last activity: 2026-04-04 — Phase 5.2 Plan 01 complete (2 tasks, 2 files)
+Plan: 2 of 2 complete in Phase 5.2 (05.2-02 complete — Phase 5.2 DONE)
+Status: Phase 5.2 complete — search-agent writes evidence to UID scratch files; orchestrator propagates UID in all subagent calls; Claudie principle enforced.
+Last activity: 2026-04-04 — Phase 5.2 Plan 02 complete (2 tasks, 2 files)
 
-Progress: [█████████░] 93%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02 | Phase 3.1: 03.1-01, 03.1-02, 03.1-03 | Phase 4: 04-01, 04-02, 04-03 | Phase 5.1.1: 05.1.1-01) — 03-03 at checkpoint
+- Total plans completed: 18 (Phase 1: 01-01, 01-02, 01-03 | Phase 2: 02-01, 02-02, 02-01-retroactive, 02-03 | Phase 3: 03-01, 03-02 | Phase 3.1: 03.1-01, 03.1-02, 03.1-03 | Phase 4: 04-01, 04-02, 04-03 | Phase 5.1.1: 05.1.1-01 | Phase 5.2: 05.2-01, 05.2-02) — 03-03 at checkpoint
 - Total execution time: 7 sessions
 
 **By Phase:**
@@ -33,7 +33,7 @@ Progress: [█████████░] 93%
 | 5: A2A HTTP Server | 2/2 | Complete |
 | 5.1: Enhance Agent Prompts + Tools | 3/3 | Complete |
 | 5.1.1: Custom DeepAgents Harness | 1/1 | Complete |
-| 5.2: Refactor Working Dir + Skills + Harness | 1/2 | In progress |
+| 5.2: Refactor Working Dir + Skills + Harness | 2/2 | Complete |
 
 **Execution Metrics:**
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 93%
 | Phase 05.1-enhance-agent-prompts-tools-and-agentbeats-a2a-integration P03 | 10min | 2 tasks (1 auto + 1 human-verify) | 2 files |
 | Phase 05.1.1-custom-deepagents-harness P01 | 4min | 3 tasks (2 feat + 1 smoke test) | 2 files |
 | Phase 05.2 P01 | 2min | 2 tasks | 2 files |
+| Phase 05.2 P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,9 @@ Recent decisions affecting current work:
 - [Phase 05.2]: SkillsMiddleware on orchestrator only -- search-agent and verifier are pure workers (Claudie principle)
 - [Phase 05.2]: Separate FilesystemBackend for skills dir (read-only); LocalShellBackend for scratch (read-write + execute)
 - [Phase 05.2]: SCRATCH_DIR env var with _PROJECT_ROOT / agentspace / scratch default -- matches CORPUS_DIR pattern from config.py
+- [Phase 05.2-02]: UID passed via task description prefix -- not env var or config field
+- [Phase 05.2-02]: Search-agent owns evidence.txt, tables.txt, extracted_values.txt; orchestrator owns calc.txt, answer.txt
+- [Phase 05.2-02]: Search-agent returns only completion pointer string, never raw data (Claudie principle enforced)
 
 ### Pending Todos
 
@@ -144,6 +148,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-04
-Stopped at: Completed 05.2-01-PLAN.md
-Next: 05.2-02-PLAN.md (search-agent file-writing pattern + orchestrator prompt refactor)
+Stopped at: Completed 05.2-02-PLAN.md (Phase 5.2 complete)
+Next: Phase 6 — Advanced Statistics and Hard Questions
 Resume file: None
