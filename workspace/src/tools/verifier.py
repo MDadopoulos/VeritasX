@@ -4,7 +4,7 @@ verifier.py — Verification subagent spec and helper functions for Phase 4 reli
 This module provides:
   - VERIFIER_SUBAGENT_SPEC: SubAgent-compatible dict for registering the verifier
     with create_deep_agent(subagents=[...])
-  - VERIFIER_SYSTEM_PROMPT: System prompt defining four-dimension verification checks
+  - VERIFIER_SYSTEM_PROMPT: System prompt defining eight-dimension verification checks
   - _generate_token(answer): Deterministic 16-char hex token via sha256
   - resolve_era_column_header(target, candidates, cutoff): Fuzzy column header matching
     for multi-era questions where series names differ across document vintages
@@ -83,6 +83,20 @@ The task description you receive will contain the question UID and the proposed 
 Extract both from the task description text — they are NOT injected into this system prompt. \
 Construct all file paths using the UID you extract from the task description.
 
+## Question Patterns
+
+Questions in this benchmark typically follow these patterns:
+- "What were the total expenditures (in millions of nominal dollars) for..."
+- "What was the absolute percent change... rounded to the nearest hundredths place and reported as a percent value (12.34%, not 0.1234)?"
+- "What is the geometric mean of the reported budget expenditures values for each month from..."
+- "Using specifically only the reported values for all individual calendar months in..."
+
+Pay attention to:
+- Unit instructions: "in millions", "in billions", "in nominal dollars"
+- Precision instructions: "rounded to nearest hundredths", "two decimal places"
+- Format instructions: "reported as a percent value", "expressed in billions"
+- Value source instructions: "reported values", "revised figures", "as reported"
+
 ## Input Files
 
 Read the following files using the read_file tool (inherited from FilesystemMiddleware). \
@@ -93,10 +107,10 @@ the task description:
   - UID/calc.txt          — arithmetic expressions with labeled inputs and results (may be absent)
   - UID/tables.txt        — raw table blocks (may be absent)
 
-## Four Verification Checks
+## Eight Verification Checks
 
-Perform the following four checks in order. The first three are HARD VETO — any failure \
-returns status "FAIL" immediately. Check 4 is SOFT WARNING only.
+Perform the following checks in order. Checks 1-6 are HARD VETO — any failure \
+returns status "FAIL" immediately. Checks 7-8 are SOFT WARNING only.
 
 ### Check 1: Evidence Coverage (HARD VETO)
 
@@ -128,15 +142,121 @@ If calc.txt exists and is parseable:
 SKIP this check only if calc.txt is absent or unparseable AND the answer type does not \
 require arithmetic (use your judgment — e.g., a direct lookup answer with no calculation).
 
-### Check 4: Format Match (SOFT WARNING — does NOT cause FAIL)
+### Check 4: Formula Variant Fidelity (HARD VETO)
 
-The proposed answer should match standard normalizer format patterns:
-  - Percentages end with "%" and have at most 2 decimal places
-  - Dollar amounts use "$" prefix or appropriate currency notation
-  - Year ranges use consistent separators
-  - Numbers avoid unnecessary trailing zeros
+If calc.txt references a compute_stat call, verify the variant field matches what the \
+question explicitly requested. Common traps:
 
-WARN (add to issues list) but do NOT set status to "FAIL" for cosmetic format mismatches.
+  - "population standard deviation" -> variant must contain "population" (ddof=0), \
+    NOT "sample" (ddof=1). FAIL if the wrong variant was used.
+  - "sample standard deviation" -> variant must contain "sample" (ddof=1).
+  - Percentile methods: if the question specifies "Type 7", "Hazen", "inclusive", or \
+    "exclusive", the variant must match. Default numpy percentile (linear interpolation) \
+    is Type 7 — only FAIL if a different method was explicitly requested.
+  - "geometric mean" vs "arithmetic mean" — FAIL if the wrong central tendency was used.
+  - "Pearson" vs "Spearman" vs "Kendall" correlation — FAIL on mismatch.
+  - "population variance" vs "sample variance" — same rule as standard deviation.
+
+SKIP this check if calc.txt contains only basic arithmetic (calculate/pct_change/sum_values) \
+with no compute_stat calls.
+
+### Check 5: Instruction Fidelity (HARD VETO)
+
+Re-read the original question (from the task description) and verify the answer respects \
+ALL explicit constraints. Common traps to check:
+
+  - "use only reported monthly values" -> evidence must contain monthly rows, NOT annual aggregates
+  - "fiscal year" vs "calendar year" -> extracted_values.txt tags must match what was asked
+  - "exclude X" / "non-agency" / "marketable only" -> verify excluded items are not in the sum
+  - "most recently published" vs "as reported" -> verify correct bulletin vintage was used
+  - "as of [date]" -> verify the data point matches that exact date, not a different period
+  - Rounding instructions ("nearest hundredths", "two decimal places", "round to nearest integer") \
+    -> verify the proposed answer has the correct precision
+  - "percent" vs "decimal" -> verify the answer uses the requested form
+  - "in [year] dollars" / "constant dollars" -> verify inflation adjustment was applied
+
+FAIL if any explicit instruction in the question was violated by the evidence or answer.
+
+### Check 6: Cross-Source Alignment (HARD VETO when applicable)
+
+If calc.txt shows that external data was joined with Treasury data (CPI adjustment, FX \
+conversion, or external macro series), verify:
+
+  - Date alignment: the external data point matches the same period as the Treasury value \
+    (e.g., CPI for March 1970 was used with March 1970 Treasury data, not annual average \
+    with monthly data unless the question allows it)
+  - Unit consistency after conversion: if inflating/deflating, the base year/month in the \
+    result matches what the question requested
+  - FX convention: if converting currencies, verify the correct date and rate convention \
+    (spot vs monthly average vs annual average) matches what the question implies
+
+SKIP this check if no external data joins are present in calc.txt.
+
+### Check 7: Benchmark Format Match (SOFT WARNING — does NOT cause FAIL)
+
+The benchmark expects answers in specific formats. Compare the proposed answer against \
+these known answer patterns from the benchmark:
+
+**Numeric formats:**
+- Plain integers: 507, 42, 73 (no commas for numbers under 1000)
+- Comma-separated integers: 2,602 / 44,463 / 103,375 (commas for thousands in large numbers \
+  — BUT many answers omit commas: 103030, 180681, 92000000)
+- Decimals: 0.42, 32.703, 81.406, 0.00262 (varying precision — use the precision the question \
+  requests, or the natural precision of the computation)
+- Large decimals: 25258095.24, 935851121560 (no commas, no scientific notation)
+
+**Percentage formats:**
+- With % symbol: 1608.80%, 9.89%, -18.51%, 69%, 3%
+- Precision varies: 9.987% (3 decimal), 1608.80% (2 decimal), 69% (integer)
+- When the question says "percent value" or "reported as a percent", use % suffix
+- When the question says "decimal" (e.g., "0.1234, not 12.34%"), do NOT add %
+
+**Currency formats:**
+- Dollar sign prefix: $37,921,314, $2,760.44, $140.9 Billion
+- Only use $ when the question asks for a dollar-denominated final answer
+- Unit suffixes: "million", "millions", "billion", "Billion" (capitalization varies)
+
+**Unit-labeled formats:**
+- Number followed by unit: 36080 million, 997.3 billion, 1169.41 million, -1,667.86 millions
+- Use the unit scale the question specifies ("in millions", "in billions")
+
+**List/tuple formats:**
+- Bracketed comma-separated: [0.096, -184.143], [2.81, 0.030, 8.706]
+- Mixed types: [2017, 0.69], [0.012, surplus], [2.59%, 2.34%, Decreased]
+- Use lists when the question asks for multiple distinct values
+
+**Date formats:**
+- Full date: March 3, 1977
+- Month and year: August 1986
+- Year only: 1990, 1973
+
+**Negative values:**
+- Standard minus: -118255.5, -0.119, -18.51%
+- Unicode minus (U+2212): \u22123.524, \u2212156.11 (both are acceptable)
+
+**Format validation rules:**
+1. If the question specifies rounding ("nearest hundredths", "two decimal places"), verify \
+   precision matches
+2. If the question specifies unit format ("in millions", "as a percent value"), verify \
+   unit/suffix matches
+3. If the question asks for multiple values, verify list format [val1, val2, ...]
+4. Trailing zeros: 1608.80% is valid (question asked for "hundredths place")
+5. No scientific notation — benchmark never uses it
+
+WARN (add to issues list with specific format concern) but do NOT set status to "FAIL" \
+for format mismatches.
+
+### Check 8: Plausibility (SOFT WARNING — does NOT cause FAIL)
+
+Sanity-check the proposed answer for obvious errors:
+  - Sign: is a negative value plausible? (e.g., negative expenditures are unusual)
+  - Scale: does the magnitude make sense? (e.g., defense spending of $2 vs $2,602 million)
+  - Range: percentages outside [-100%, +10000%] warrant a note
+  - Historical context: is the answer consistent with the era? (e.g., 1940s spending should \
+    be much smaller than 2020s spending in nominal terms)
+
+WARN (add to issues list) but do NOT set status to "FAIL" for plausibility concerns. \
+These are flags for the orchestrator to review, not hard vetoes.
 
 ## Output Format
 
@@ -161,7 +281,7 @@ append pattern (FilesystemMiddleware has no native append mode — write_file al
   3. write_file("UID/verification.txt", combined_content)
 
 Format for each attempt record:
-  Attempt N: Status: <PASS|FAIL|ERROR> | Checks: evidence: <PASS|FAIL|SKIP>, arithmetic: <PASS|FAIL|SKIP>, units: <PASS|FAIL|SKIP>, format: <PASS|WARN|SKIP> | Token: <token or null>
+  Attempt N: Status: <PASS|FAIL|ERROR> | Checks: evidence: <PASS|FAIL|SKIP>, units: <PASS|FAIL|SKIP>, arithmetic: <PASS|FAIL|SKIP>, formula_variant: <PASS|FAIL|SKIP>, instruction_fidelity: <PASS|FAIL|SKIP>, cross_source: <PASS|FAIL|SKIP>, format: <PASS|WARN|SKIP>, plausibility: <PASS|WARN|SKIP> | Token: <token or null>
   ---
 
 Replace UID with the actual question UID. Replace N with the attempt number (count existing \
