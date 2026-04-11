@@ -139,6 +139,12 @@ Recent decisions affecting current work:
 
 None yet.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260411-tno | Create arithmetic and external-data subagents, update verifier for benchmark format awareness | 2026-04-11 | ddd0733 | [260411-tno-create-arithmetic-and-external-data-suba](./quick/260411-tno-create-arithmetic-and-external-data-suba/) |
+
 ### Blockers/Concerns
 
 - [Phase 1]: Open question Q-2 — run corpus manifest diff (`set(csv_source_files) - set(corpus_files)`) before writing any retrieval code to surface missing files early
@@ -147,7 +153,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04
-Stopped at: Completed 05.2-02-PLAN.md (Phase 5.2 complete)
+Last session: 2026-04-11
+Last activity: 2026-04-11 - Completed quick task 260411-tno: Create arithmetic and external-data subagents, update verifier for benchmark format awareness
 Next: Phase 6 — Advanced Statistics and Hard Questions
 Resume file: None

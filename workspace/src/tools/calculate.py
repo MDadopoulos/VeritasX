@@ -49,7 +49,12 @@ def _eval_node(node):
     if isinstance(node, ast.Constant):
         # MUST use str() to avoid float imprecision:
         # Decimal(3.14) -> 3.14000000000000012... but Decimal("3.14") -> 3.14
-        return Decimal(str(node.value))
+        if not isinstance(node.value, (int, float)):
+            return {"error": "INVALID_INPUT", "reason": f"Non-numeric literal: {node.value!r}"}
+        try:
+            return Decimal(str(node.value))
+        except InvalidOperation:
+            return {"error": "INVALID_INPUT", "reason": f"Cannot convert to Decimal: {node.value!r}"}
 
     if isinstance(node, ast.BinOp):
         left = _eval_node(node.left)
@@ -126,7 +131,10 @@ def calculate(expr: str) -> dict:
                 "reason": f"AST node {type(node).__name__} not allowed",
             }
 
-    result = _eval_node(tree)
+    try:
+        result = _eval_node(tree)
+    except (InvalidOperation, OverflowError, ValueError) as e:
+        return {"error": "EVAL_ERROR", "reason": str(e)}
 
     # _eval_node returns a dict only on error
     if isinstance(result, dict):
@@ -184,8 +192,11 @@ def pct_change(old: float, new: float, unit_old: Optional[str] = None, unit_new:
             "reason": "old value is zero, cannot compute pct_change",
         }
 
-    result = (new_d - old_d) / old_d * Decimal("100")
-    return {"result": round(result, 2)}
+    try:
+        result = (new_d - old_d) / old_d * Decimal("100")
+        return {"result": round(result, 2)}
+    except (InvalidOperation, OverflowError, ValueError) as e:
+        return {"error": "EVAL_ERROR", "reason": f"Arithmetic failed: {e}"}
 
 
 # Unit word regex for sum_values label scanning
@@ -215,6 +226,9 @@ def sum_values(pairs: list, expected_count: int) -> dict:
         {"error": "COUNT_MISMATCH", "reason": ..., "actual_count": int}
         {"error": "INVALID_INPUT", "reason": ...}
     """
+    if not isinstance(pairs, list):
+        return {"error": "INVALID_INPUT", "reason": f"pairs must be a list, got {type(pairs).__name__}"}
+
     if len(pairs) != expected_count:
         return {
             "error": "COUNT_MISMATCH",
@@ -225,7 +239,11 @@ def sum_values(pairs: list, expected_count: int) -> dict:
     total = Decimal("0")
     units: set = set()
 
-    for label, value in pairs:
+    for item in pairs:
+        try:
+            label, value = item
+        except (TypeError, ValueError):
+            return {"error": "INVALID_INPUT", "reason": f"Each pair must be [label, value], got {item!r}"}
         try:
             val = Decimal(str(value))
         except InvalidOperation:

@@ -170,6 +170,10 @@ def route_files(question: str) -> dict:
         On no-year-found:
             {"error": "no_year_found", "question": question}
     """
+    if not question or not isinstance(question, str) or not question.strip():
+        return {"error": "invalid_input", "question": question,
+                "reason": "question must be a non-empty string"}
+
     years = extract_years(question)
 
     if not years:

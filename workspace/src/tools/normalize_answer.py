@@ -43,13 +43,9 @@ _DATE_RE = re.compile(
 _UNICODE_MINUS = '\u2212'
 
 
-def normalize_answer(raw: str, verification_token: str) -> dict:
+def normalize_answer(raw: str, verification_token: str = None) -> dict:
     """
     Normalize a raw answer string to match benchmark format exactly.
-
-    USAGE: Call this ONLY after the verifier returns PASS and provides a
-    verification_token. The token is mandatory — calling without it raises
-    ValueError. Pass the raw calculated answer string and the token.
 
     Parameters
     ----------
@@ -57,8 +53,7 @@ def normalize_answer(raw: str, verification_token: str) -> dict:
         The raw answer string from the calculator or extracted from the corpus.
         Must be a non-empty string.
     verification_token : str
-        Non-null token from the verifier subagent (sha256 hex prefix).
-        Raises ValueError if absent or null. Ensures verification cannot be bypassed.
+        Token from the verifier subagent (16-char hex from PASS response). Required.
 
     Returns
     -------
@@ -66,12 +61,15 @@ def normalize_answer(raw: str, verification_token: str) -> dict:
         {"result": str} on success.
         {"error": "INVALID_INPUT", "reason": str} on invalid input.
     """
-    # --- Verification gate (must be FIRST, before any other logic) ---
+    # --- Verification gate — requires token from verifier subagent ---
     if not verification_token:
-        raise ValueError(
-            "normalize_answer requires a non-null verification_token from the verifier. "
-            "Call task(subagent_type='verifier') first and pass its token."
-        )
+        return {
+            "error": "VERIFICATION_REQUIRED",
+            "reason": (
+                "normalize_answer requires a non-null verification_token from the verifier. "
+                "Call task(subagent_type='verifier') first and pass its token."
+            ),
+        }
 
     # --- Input validation ---
     if raw is None or not isinstance(raw, str):

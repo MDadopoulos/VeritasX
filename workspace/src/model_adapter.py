@@ -24,7 +24,7 @@ def get_model(model_id: str | None = None):
 
     Args:
         model_id: Optional model ID string. If None, reads MODEL_ID from the
-                  environment (defaulting to "gemini-2.0-flash").
+                  environment (defaulting to "gemini-3-flash-preview").
 
     Returns:
         ChatGoogleGenerativeAI for "gemini-*" model IDs.
@@ -34,7 +34,7 @@ def get_model(model_id: str | None = None):
         ValueError: if model_id does not start with "gemini-" or "claude-".
     """
     if model_id is None:
-        model_id = os.environ.get("MODEL_ID", "gemini-2.0-flash")
+        model_id = os.environ.get("MODEL_ID", "gemini-3-flash-preview")
 
     project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
     location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")

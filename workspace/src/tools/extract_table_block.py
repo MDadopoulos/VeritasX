@@ -136,10 +136,10 @@ def extract_table_block(span_text: str, anchor: str) -> dict:
             {"error": "NO_TABLE_FOUND", "reason": "..."}
     """
     # --- Input validation ---
-    if not span_text or not span_text.strip():
-        return {"error": "INVALID_INPUT", "reason": "span_text is empty or whitespace"}
-    if not anchor or not anchor.strip():
-        return {"error": "INVALID_INPUT", "reason": "anchor is empty or whitespace"}
+    if not isinstance(span_text, str) or not span_text.strip():
+        return {"error": "INVALID_INPUT", "reason": "span_text must be a non-empty string"}
+    if not isinstance(anchor, str) or not anchor.strip():
+        return {"error": "INVALID_INPUT", "reason": "anchor must be a non-empty string"}
 
     lines = span_text.splitlines()
     anchor_lower = anchor.strip().lower()

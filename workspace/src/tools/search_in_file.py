@@ -151,7 +151,7 @@ def build_spans(lines: list[str], window: int = 20) -> list[dict]:
 def search_in_file(
     file_path: str,
     query: str,
-    top_k: int = 5,
+    top_k: int = 2,
 ) -> list[dict] | dict:
     """
     Search a bulletin file for the most relevant spans using BM25.
@@ -172,7 +172,8 @@ def search_in_file(
     Args:
         file_path: Path to the bulletin text file.
         query: The search query (will be normalised internally).
-        top_k: Maximum number of results to return.
+        top_k: Maximum number of results to return. Default 2 — use 3-4 only
+               if the first pass misses the target span.
 
     Returns:
         On success (BM25 or regex hits):
@@ -188,12 +189,34 @@ def search_in_file(
             {"error": "no_results", "query": query, "file": file_path,
              "spans_searched": int}
     """
+    if not file_path or not isinstance(file_path, str):
+        return {"error": "invalid_input", "query": query, "file": file_path,
+                "reason": "file_path must be a non-empty string"}
+    if not query or not isinstance(query, str) or not query.strip():
+        return {"error": "invalid_input", "query": query, "file": file_path,
+                "reason": "query must be a non-empty string"}
+
     abs_path = str(Path(file_path).resolve())
 
-    with open(file_path, encoding="utf-8") as f:
-        raw_lines = [line.rstrip("\n") for line in f]
+    try:
+        with open(file_path, encoding="utf-8") as f:
+            raw_lines = [line.rstrip("\n") for line in f]
+    except FileNotFoundError:
+        return {
+            "error": "file_not_found",
+            "query": query,
+            "file": file_path,
+            "hint": "Use the exact paths returned by route_files. Do not construct paths manually.",
+        }
+    except OSError as e:
+        return {"error": "file_read_error", "query": query, "file": file_path,
+                "reason": str(e)}
 
     spans = build_spans(raw_lines)
+    if not spans:
+        return {"error": "no_results", "query": query, "file": file_path,
+                "spans_searched": 0, "reason": "File is empty"}
+
     norm_query = normalize_query(query)
 
     # Tokenise spans and query
