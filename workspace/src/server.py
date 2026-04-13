@@ -119,7 +119,7 @@ async def health_endpoint(request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-def build_app():
+def build_app(card_url=None):
     """
     Build and return the Starlette ASGI app with A2A routes and /health.
 
@@ -149,7 +149,7 @@ def build_app():
     agent_card = AgentCard(
         name="VeritasX",
         description="Agent over US Treasury bulletins, 1939-2025",
-        url=f"http://0.0.0.0:{PORT}/",
+        url=card_url or f"http://0.0.0.0:{PORT}/",
         version="1.0.0",
         default_input_modes=["text"],
         default_output_modes=["text"],
@@ -191,7 +191,15 @@ def build_app():
 app = build_app()
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
 
-    host = os.environ.get("SERVER_HOST", "0.0.0.0")
-    uvicorn.run(app, host=host, port=PORT)
+    parser = argparse.ArgumentParser(description="VeritasX A2A Server")
+    parser.add_argument("--host", default=os.environ.get("SERVER_HOST", "0.0.0.0"), help="Host IP")
+    parser.add_argument("--port", type=int, default=PORT, help="Port to bind")
+    parser.add_argument("--card-url", default=None, help="Agent card URL (optional)")
+    
+    args = parser.parse_args()
+
+    cli_app = build_app(card_url=args.card_url)
+    uvicorn.run(cli_app, host=args.host, port=args.port)
