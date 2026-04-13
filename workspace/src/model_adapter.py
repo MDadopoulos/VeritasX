@@ -41,10 +41,18 @@ def get_model(model_id: str | None = None):
 
     if model_id.startswith("gemini-"):
         from langchain_google_genai import ChatGoogleGenerativeAI
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        if api_key:
+            return ChatGoogleGenerativeAI(
+                model=model_id,
+                google_api_key=api_key,
+                #timeout=60,
+            )
         return ChatGoogleGenerativeAI(
             model=model_id,
             project=project,
             location=location,
+            #timeout=60,
         )
 
     if model_id.startswith("claude-"):
@@ -53,6 +61,7 @@ def get_model(model_id: str | None = None):
             model_name=model_id,
             project=project,
             location=location,
+            timeout=60,
         )
 
     raise ValueError(

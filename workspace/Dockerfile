@@ -6,15 +6,20 @@ RUN useradd -m agent
 WORKDIR /home/agent/workspace
 
 # Install dependencies first (layer caching)
-COPY requirements.txt ./
+# Note: Since the build context is the parent directory (Option B), we prefix with workspace/
+COPY workspace/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
-COPY src/ src/
+COPY workspace/src/ src/
+
+# Copy the skills from agentspace into the correct container path
+# harness.py resolves agentspace relative to workspace folder!
+COPY agentspace/skills/ /home/agent/agentspace/skills/
 
 # Copy corpus (large — placed last for cache efficiency during dev)
 # Note: corpus is mounted as volume in local dev; COPY is for full image builds
-# COPY corpus/ /home/agent/corpus/
+COPY corpus/ /home/agent/corpus/
 
 # Set environment defaults
 ENV SERVER_PORT=9009

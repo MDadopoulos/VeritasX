@@ -1,0 +1,259 @@
+{
+  "source": "Federal Reserve H.10 / G.5 Release",
+  "description": "Noon buying rates in New York for cable transfers payable in foreign currencies",
+  "last_updated": "2025-12-31",
+  "base_currency": "USD",
+  "dem_eur_fixed_rate": 1.95583,
+  "dem_eur_transition_date": "1999-01-01",
+  "currencies": {
+    "AUD": {
+      "name": "Australian Dollar",
+      "quote": "usd_per",
+      "unit_label": "USD per 1 AUD",
+      "fred_daily": "DEXUSAL",
+      "fred_monthly": "EXUSAL",
+      "fred_annual": "AEXUSAL",
+      "start_date": "1971-01-04"
+    },
+    "BRL": {
+      "name": "Brazilian Real",
+      "quote": "per_usd",
+      "unit_label": "BRL per 1 USD",
+      "fred_daily": "DEXBZUS",
+      "fred_monthly": "EXBZUS",
+      "fred_annual": "AEXBZUS",
+      "start_date": "1995-01-02"
+    },
+    "CAD": {
+      "name": "Canadian Dollar",
+      "quote": "per_usd",
+      "unit_label": "CAD per 1 USD",
+      "fred_daily": "DEXCAUS",
+      "fred_monthly": "EXCAUS",
+      "fred_annual": "AEXCAUS",
+      "start_date": "1971-01-04"
+    },
+    "CNY": {
+      "name": "Chinese Yuan",
+      "quote": "per_usd",
+      "unit_label": "CNY per 1 USD",
+      "fred_daily": "DEXCHUS",
+      "fred_monthly": "EXCHUS",
+      "fred_annual": "AEXCHUS",
+      "start_date": "1981-01-02"
+    },
+    "DKK": {
+      "name": "Danish Krone",
+      "quote": "per_usd",
+      "unit_label": "DKK per 1 USD",
+      "fred_daily": "DEXDNUS",
+      "fred_monthly": "EXDNUS",
+      "fred_annual": "AEXDNUS",
+      "start_date": "1971-01-04"
+    },
+    "EUR": {
+      "name": "Euro",
+      "quote": "usd_per",
+      "unit_label": "USD per 1 EUR",
+      "fred_daily": "DEXUSEU",
+      "fred_monthly": "EXUSEU",
+      "fred_annual": "AEXUSEU",
+      "start_date": "1999-01-04"
+    },
+    "GBP": {
+      "name": "British Pound Sterling",
+      "quote": "usd_per",
+      "unit_label": "USD per 1 GBP",
+      "fred_daily": "DEXUSUK",
+      "fred_monthly": "EXUSUK",
+      "fred_annual": "AEXUSUK",
+      "start_date": "1971-01-04"
+    },
+    "HKD": {
+      "name": "Hong Kong Dollar",
+      "quote": "per_usd",
+      "unit_label": "HKD per 1 USD",
+      "fred_daily": "DEXHKUS",
+      "fred_monthly": "EXHKUS",
+      "fred_annual": "AEXHKUS",
+      "start_date": "1981-01-02"
+    },
+    "INR": {
+      "name": "Indian Rupee",
+      "quote": "per_usd",
+      "unit_label": "INR per 1 USD",
+      "fred_daily": "DEXINUS",
+      "fred_monthly": "EXINUS",
+      "fred_annual": "AEXINUS",
+      "start_date": "1973-01-02"
+    },
+    "JPY": {
+      "name": "Japanese Yen",
+      "quote": "per_usd",
+      "unit_label": "JPY per 1 USD",
+      "fred_daily": "DEXJPUS",
+      "fred_monthly": "EXJPUS",
+      "fred_annual": "AEXJPUS",
+      "start_date": "1971-01-04"
+    },
+    "KRW": {
+      "name": "South Korean Won",
+      "quote": "per_usd",
+      "unit_label": "KRW per 1 USD",
+      "fred_daily": "DEXKOUS",
+      "fred_monthly": "EXKOUS",
+      "fred_annual": "AEXKOUS",
+      "start_date": "1981-04-13"
+    },
+    "MYR": {
+      "name": "Malaysian Ringgit",
+      "quote": "per_usd",
+      "unit_label": "MYR per 1 USD",
+      "fred_daily": "DEXMAUS",
+      "fred_monthly": "EXMAUS",
+      "fred_annual": "AEXMAUS",
+      "start_date": "1971-01-04"
+    },
+    "MXN": {
+      "name": "Mexican Peso",
+      "quote": "per_usd",
+      "unit_label": "MXN per 1 USD",
+      "fred_daily": "DEXMXUS",
+      "fred_monthly": "EXMXUS",
+      "fred_annual": "AEXMXUS",
+      "start_date": "1993-11-08"
+    },
+    "NZD": {
+      "name": "New Zealand Dollar",
+      "quote": "usd_per",
+      "unit_label": "USD per 1 NZD",
+      "fred_daily": "DEXUSNZ",
+      "fred_monthly": "EXUSNZ",
+      "fred_annual": "AEXUSNZ",
+      "start_date": "1971-01-04"
+    },
+    "NOK": {
+      "name": "Norwegian Krone",
+      "quote": "per_usd",
+      "unit_label": "NOK per 1 USD",
+      "fred_daily": "DEXNOUS",
+      "fred_monthly": "EXNOUS",
+      "fred_annual": "AEXNOUS",
+      "start_date": "1971-01-04"
+    },
+    "SGD": {
+      "name": "Singapore Dollar",
+      "quote": "per_usd",
+      "unit_label": "SGD per 1 USD",
+      "fred_daily": "DEXSIUS",
+      "fred_monthly": "EXSIUS",
+      "fred_annual": "AEXSIUS",
+      "start_date": "1981-01-02"
+    },
+    "ZAR": {
+      "name": "South African Rand",
+      "quote": "per_usd",
+      "unit_label": "ZAR per 1 USD",
+      "fred_daily": "DEXSFUS",
+      "fred_monthly": "EXSFUS",
+      "fred_annual": "AEXSFUS",
+      "start_date": "1971-01-04"
+    },
+    "LKR": {
+      "name": "Sri Lankan Rupee",
+      "quote": "per_usd",
+      "unit_label": "LKR per 1 USD",
+      "fred_daily": "DEXSLUS",
+      "fred_monthly": "EXSLUS",
+      "fred_annual": "AEXSLUS",
+      "start_date": "1971-01-04"
+    },
+    "SEK": {
+      "name": "Swedish Krona",
+      "quote": "per_usd",
+      "unit_label": "SEK per 1 USD",
+      "fred_daily": "DEXSDUS",
+      "fred_monthly": "EXSDUS",
+      "fred_annual": "AEXSDUS",
+      "start_date": "1971-01-04"
+    },
+    "CHF": {
+      "name": "Swiss Franc",
+      "quote": "per_usd",
+      "unit_label": "CHF per 1 USD",
+      "fred_daily": "DEXSZUS",
+      "fred_monthly": "EXSZUS",
+      "fred_annual": "AEXSZUS",
+      "start_date": "1971-01-04"
+    },
+    "TWD": {
+      "name": "Taiwan Dollar",
+      "quote": "per_usd",
+      "unit_label": "TWD per 1 USD",
+      "fred_daily": "DEXTAUS",
+      "fred_monthly": "EXTAUS",
+      "fred_annual": "AEXTAUS",
+      "start_date": "1983-10-03"
+    },
+    "THB": {
+      "name": "Thai Baht",
+      "quote": "per_usd",
+      "unit_label": "THB per 1 USD",
+      "fred_daily": "DEXTHUS",
+      "fred_monthly": "EXTHUS",
+      "fred_annual": "AEXTHUS",
+      "start_date": "1981-01-02"
+    },
+    "VEF": {
+      "name": "Venezuelan Bolivar",
+      "quote": "per_usd",
+      "unit_label": "VEF per 1 USD",
+      "fred_daily": "DEXVZUS",
+      "fred_monthly": "EXVZUS",
+      "fred_annual": "AEXVZUS",
+      "start_date": "1995-01-02",
+      "notes": "Multiple redenominations; data may be discontinuous"
+    },
+    "DEM": {
+      "name": "Deutsche Mark",
+      "quote": "per_usd",
+      "unit_label": "DEM per 1 USD",
+      "fred_daily": null,
+      "fred_monthly": "EXGEUS",
+      "fred_annual": "AEXGEUS",
+      "start_date": "1971-01-04",
+      "end_date": "1998-12-31",
+      "legacy": true,
+      "successor": "EUR",
+      "fixed_rate_to_successor": 1.95583,
+      "notes": "Native data through Dec 1998. For dates from Jan 1999 onward, auto-chains via EUR at 1 EUR = 1.95583 DEM."
+    }
+  },
+  "aliases": {
+    "DOLLAR": "USD",
+    "YEN": "JPY",
+    "POUND": "GBP",
+    "STERLING": "GBP",
+    "EURO": "EUR",
+    "MARK": "DEM",
+    "DEUTSCHE MARK": "DEM",
+    "DEUTSCHMARK": "DEM",
+    "D-MARK": "DEM",
+    "RUPEE": "INR",
+    "LOONIE": "CAD",
+    "YUAN": "CNY",
+    "RENMINBI": "CNY",
+    "RMB": "CNY",
+    "FRANC": "CHF",
+    "SWISS FRANC": "CHF",
+    "REAL": "BRL",
+    "WON": "KRW",
+    "BAHT": "THB",
+    "RINGGIT": "MYR",
+    "RAND": "ZAR",
+    "KRONE": "NOK",
+    "KRONA": "SEK",
+    "PESO": "MXN",
+    "BOLIVAR": "VEF"
+  }
+}

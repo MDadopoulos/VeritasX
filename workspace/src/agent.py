@@ -1,12 +1,10 @@
 """
-agent.py — Agent system prompt and run_question entry point.
+agent.py — Agent and run_question entry point.
 
 Composes all Phase 1+2 tools into a functioning agent loop with scratch
 isolation, planning gate, and native Deep Agent turn management.
 
 Public API:
-    SYSTEM_PROMPT                           str   — Orchestrator system prompt (trimmed; retrieval
-                                                    rules moved to search subagent in harness.py)
     run_question(uid, question)             str   — Orchestrates per-question lifecycle
     run_question_with_messages(uid, question) dict — Returns answer + full message list
 """
@@ -33,92 +31,6 @@ def _extract_text(content: Any) -> str:
         )
     return str(content)
 
-# ---------------------------------------------------------------------------
-# System prompt
-# ---------------------------------------------------------------------------
-
-SYSTEM_PROMPT: str = """\
-## Mandatory Planning Gate
-
-Before calling ANY tool, you MUST first call write_todos with at minimum:
-1. A restatement of the question as you understand it.
-2. Your planned tool call sequence in order.
-
-You may update the todo list mid-run as new evidence changes the plan.
-Mark items as completed (status: "completed") as you finish each step.
-
-## Question Decomposition (BEFORE calling the search agent)
-
-Before tasking the search agent, decompose the question into two distinct parts:
-
-1. SOURCE CONSTRAINT — which table or bulletin to retrieve from.
-   This is often phrased as: "according to the table for X", "using only the Y report",
-   "from the breakdown covering years A–B", "as reported in the Z series".
-   → This tells the search agent WHAT TABLE to find.
-
-2. COMPUTATION RANGE — which values to extract from that table for calculation.
-   This is often a sub-range within the source: "for each month from M1 to M2",
-   "for fiscal years N1 through N2", "the values reported for Q".
-   → This tells the search agent WHICH ROWS to extract from the table.
-
-These are NOT the same thing. A question may say:
-  "From the 1940–1949 decade table, compute the geometric mean for March 1942 – October 1948"
-  Source constraint = find the 1940–1949 decade table
-  Computation range = extract monthly rows March 1942 – October 1948 from that table
-
-The task you send to the search agent must describe the SOURCE CONSTRAINT (which table),
-not the computation range. The computation range goes into your calculation step.
-
-## Retrieval via Search Agent
-
-To retrieve financial data from the corpus, call the search agent with the UID prefix:
-  task(subagent_type='search-agent', description='UID: {uid} | Task: <plain English task>')
-
-Example: task(subagent_type='search-agent',
-              description='UID: UID0001 | Task: Find defense expenditures for FY1940 across all relevant files')
-
-IMPORTANT: Every search-agent call MUST include 'UID: {uid} |' at the start of the description.
-The {uid} value comes from the question preamble ("Question UID: ...").
-
-The search agent writes evidence to {uid}/evidence.txt and extracted values to {uid}/extracted_values.txt.
-It returns ONLY a file pointer — do NOT expect inline data.
-
-Do NOT call route_files, search_in_file, or extract_table_block directly.
-
-## Scratch File Writing Instructions
-
-After the search-agent completes, read {uid}/extracted_values.txt to get the values for calculation.
-EVERY numeric value MUST include its unit. If unit is unclear, write (unit unknown).
-
-After EACH calculate/pct_change/sum_values result, APPEND to {uid}/calc.txt:
-  Format: expression, labeled inputs with source file, result
-  Example:
-    pct_change(2602, 3100)
-    Inputs: defense_1940=2602 (millions) [source: treasury_bulletin_1940_03.txt],
-            defense_1941=3100 (millions) [source: treasury_bulletin_1941_03.txt]
-    Result: 19.14%
-
-After completing all calculations, call normalize_answer with your final answer string.
-
-After calling normalize_answer, WRITE to {uid}/answer.txt:
-  Line 1: the normalized answer string
-  Line 2: a one-sentence rationale
-  Example:
-    19.14%
-    pct_change from 2602 to 3100 over FY1940
-
-## Tool Usage Rules
-
-- NEVER compute percent change with inline arithmetic. ALWAYS use the pct_change tool.
-- NEVER generate arithmetic formulas inline. ALWAYS use calculate() for all arithmetic.
-
-## Verification
-
-Before calling normalize_answer, call the verifier with the UID prefix:
-  task(subagent_type='verifier', description='UID: {uid} | <answer> | Evidence: <summary>')
-
-Only call normalize_answer after receiving a PASS from the verifier.
-"""
 
 
 # ---------------------------------------------------------------------------
@@ -145,22 +57,71 @@ def run_question(uid: str, question: str) -> str:
     Returns:
         Final answer string from the agent's last message.
     """
+    import os
+    # import logging
     from src.scratch import prepare_scratch
 
+    # logging.basicConfig(level=logging.DEBUG)
+    # logger = logging.getLogger(__name__)
+
+    # print(f"[DEBUG] run_question called: uid={uid}")
+    # print(f"[DEBUG] LANGSMITH_TRACING={os.environ.get('LANGSMITH_TRACING')}")
+    # print(f"[DEBUG] LANGCHAIN_TRACING_V2={os.environ.get('LANGCHAIN_TRACING_V2')}")
+    # print(f"[DEBUG] LANGSMITH_PROJECT={os.environ.get('LANGSMITH_PROJECT')}")
+    # print(f"[DEBUG] LANGSMITH_ENDPOINT={os.environ.get('LANGSMITH_ENDPOINT')}")
+    # print(f"[DEBUG] LANGSMITH_API_KEY set={bool(os.environ.get('LANGSMITH_API_KEY'))}")
+    # print(f"[DEBUG] MODEL_ID={os.environ.get('MODEL_ID')}")
+
+    # # --- Tracing diagnostics ---
+    # try:
+    #     from langsmith import Client
+    #     ls_client = Client()
+    #     print(f"[TRACE] LangSmith client endpoint: {ls_client.api_url}")
+    #     print(f"[TRACE] LangSmith client info: {ls_client.info}")
+    # except Exception as e:
+    #     print(f"[TRACE] LangSmith client FAILED: {e}")
+
+    # # Check if tracer is available
+    # try:
+    #     from langchain_core.tracers.langchain import LangChainTracer
+    #     print(f"[TRACE] LangChainTracer importable: True")
+    # except ImportError as e:
+    #     print(f"[TRACE] LangChainTracer import FAILED: {e}")
+
+    # # Enable langsmith debug logging
+    # logging.getLogger("langsmith").setLevel(logging.DEBUG)
+    # logging.getLogger("langchain_core.tracers").setLevel(logging.DEBUG)
+
     # SCR-01: wipe and recreate scratch directory for this question
+    # print(f"[DEBUG] Preparing scratch for {uid}...")
     prepare_scratch(uid)
+    # print(f"[DEBUG] Scratch ready.")
 
     # Create a fresh agent — fresh MemorySaver per question
     # (Pitfall 1: MemorySaver does NOT reset on scratch dir wipe; must create new instance)
+    # print(f"[DEBUG] Creating harness agent...")
     agent = harness.create_harness_agent()
+    # print(f"[DEBUG] Harness agent created successfully. Type: {type(agent).__name__}")
 
     # Prepend UID preamble so the agent knows which scratch subdirectory to write to
     user_message = (
         f"Question UID: {uid}\n"
-        f"Scratch directory: {uid}/\n\n"
+        f"Scratch directory: scratch/{uid}/\n\n"
         f"Question: {question}"
     )
 
+    # # Explicitly wire LangSmith tracer as callback
+    # from langchain_core.tracers.langchain import LangChainTracer
+    # tracer = LangChainTracer(project_name=os.environ.get("LANGSMITH_PROJECT", "default"))
+    # invoke_config = {
+    #     "configurable": {"thread_id": uid},
+    #     "callbacks": [tracer],
+    # }
+    # print(f"[TRACE] Invoke config: {invoke_config}")
+    # print(f"[TRACE] Agent type: {type(agent)}")
+    # print(f"[TRACE] Agent config_specs: {getattr(agent, 'config_specs', 'N/A')}")
+
+    # print(f"[DEBUG] Invoking agent...")
     result = agent.invoke(
         {"messages": [{"role": "user", "content": user_message}]},
         config={"configurable": {"thread_id": uid}},
@@ -189,7 +150,7 @@ def run_question_with_messages(uid: str, question: str) -> dict:
 
     user_message = (
         f"Question UID: {uid}\n"
-        f"Scratch directory: {uid}/\n\n"
+        f"Scratch directory: scratch/{uid}/\n\n"
         f"Question: {question}"
     )
 

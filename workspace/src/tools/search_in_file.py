@@ -151,43 +151,21 @@ def build_spans(lines: list[str], window: int = 20) -> list[dict]:
 def search_in_file(
     file_path: str,
     query: str,
-    top_k: int = 2,
+    top_k: int = 3,
 ) -> list[dict] | dict:
-    """
-    Search a bulletin file for the most relevant spans using BM25.
-
-    CORPUS STRUCTURE: Each bulletin file contains markdown-formatted tables
-    delimited by pipe characters (|). Spans are 20-line windows; tables are
-    never split mid-row. Unit annotations appear as "(In millions of dollars)"
-    or similar text above table headers.
-
-    PARALLEL CALL GUIDANCE: When route_files returns multiple file paths,
-    call search_in_file for ALL files in a SINGLE turn (parallel tool calls).
-    Do NOT call sequentially — issue all calls simultaneously.
-
-    QUERY TIPS: Include the series name and year in your query (e.g.,
-    "defense expenditures 1940"). For FY totals, also try "fiscal year"
-    and "annual". Numeric-only queries fall back to regex automatically.
+    """Search a bulletin text file for spans matching a query (BM25 with regex fallback).
+        QUERY TIPS: Include the series name and year in your query (e.g.,
+        "defense expenditures 1940"). For FY totals, also try "fiscal year"
+        and "annual". Numeric-only queries fall back to regex automatically.
 
     Args:
-        file_path: Path to the bulletin text file.
-        query: The search query (will be normalised internally).
-        top_k: Maximum number of results to return. Default 2 — use 3-4 only
-               if the first pass misses the target span.
+        file_path: Path to the bulletin text file (use a path returned by route_files).
+        query: Search query string.
+        top_k: Maximum number of spans to return (default 3).
 
     Returns:
-        On success (BM25 or regex hits):
-            List of up to top_k dicts, each with:
-                text         – span text
-                source_file  – absolute path to file
-                start_line   – 1-indexed start line
-                end_line     – 1-indexed end line
-                bm25_score   – float BM25 score (0.0 for regex-fallback results)
-                regex_fallback – bool
-
-        On no results:
-            {"error": "no_results", "query": query, "file": file_path,
-             "spans_searched": int}
+        List of span dicts with keys: text, source_file, start_line, end_line,
+        bm25_score, regex_fallback. Returns an error dict if no matches found.
     """
     if not file_path or not isinstance(file_path, str):
         return {"error": "invalid_input", "query": query, "file": file_path,

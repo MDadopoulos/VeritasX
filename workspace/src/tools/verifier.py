@@ -4,7 +4,7 @@ verifier.py — Verification subagent spec and helper functions for Phase 4 reli
 This module provides:
   - VERIFIER_SUBAGENT_SPEC: SubAgent-compatible dict for registering the verifier
     with create_deep_agent(subagents=[...])
-  - VERIFIER_SYSTEM_PROMPT: System prompt defining four-dimension verification checks
+  - VERIFIER_SYSTEM_PROMPT: System prompt defining eight-dimension verification checks
   - _generate_token(answer): Deterministic 16-char hex token via sha256
   - resolve_era_column_header(target, candidates, cutoff): Fuzzy column header matching
     for multi-era questions where series names differ across document vintages
@@ -83,20 +83,34 @@ The task description you receive will contain the question UID and the proposed 
 Extract both from the task description text — they are NOT injected into this system prompt. \
 Construct all file paths using the UID you extract from the task description.
 
+## Question Patterns
+
+Questions in this benchmark typically follow these patterns:
+- "What were the total expenditures (in millions of nominal dollars) for..."
+- "What was the absolute percent change... rounded to the nearest hundredths place and reported as a percent value (12.34%, not 0.1234)?"
+- "What is the geometric mean of the reported budget expenditures values for each month from..."
+- "Using specifically only the reported values for all individual calendar months in..."
+
+Pay attention to:
+- Unit instructions: "in millions", "in billions", "in nominal dollars"
+- Precision instructions: "rounded to nearest hundredths", "two decimal places"
+- Format instructions: "reported as a percent value", "expressed in billions"
+- Value source instructions: "reported values", "revised figures", "as reported"
+
 ## Input Files
 
 Read the following files using the read_file tool (inherited from FilesystemMiddleware). \
 All paths are relative to the scratch root. Replace UID with the actual question UID from \
 the task description:
-  - UID/evidence.txt      — raw text spans retrieved from corpus files
-  - UID/extracted_values.txt — numeric values extracted from evidence (name = value (unit))
-  - UID/calc.txt          — arithmetic expressions with labeled inputs and results (may be absent)
-  - UID/tables.txt        — raw table blocks (may be absent)
+  - scratch/UID/evidence.txt      — raw text spans retrieved from corpus files
+  - scratch/UID/extracted_values.txt — numeric values extracted from evidence (name = value (unit))
+  - scratch/UID/calc.txt          — arithmetic expressions with labeled inputs and results (may be absent)
+  - scratch/UID/tables.txt        — raw table blocks (may be absent)
 
-## Four Verification Checks
+## Eight Verification Checks
 
-Perform the following four checks in order. The first three are HARD VETO — any failure \
-returns status "FAIL" immediately. Check 4 is SOFT WARNING only.
+Perform the following checks in order. Checks 1-6 are HARD VETO — any failure \
+returns status "FAIL" immediately. Checks 7-8 are SOFT WARNING only.
 
 ### Check 1: Evidence Coverage (HARD VETO)
 
@@ -120,10 +134,37 @@ FAIL if any calculation mixes values with different unit annotations (e.g., one 
 
 ### Check 3: Arithmetic Re-execution (HARD VETO when applicable)
 
-If calc.txt exists and is parseable:
-  - For each expression recorded in calc.txt, re-execute it using the calculate tool.
-  - FAIL if the re-executed result differs from the recorded result by any amount (exact \
-    Decimal match required — no rounding tolerance).
+If calc.txt exists and is parseable, re-execute every recorded expression and \
+compare against the recorded result. How to re-execute depends on the op family:
+
+  (a) Basic arithmetic (calculate / pct_change / sum_values):
+      - Use the `calculate` tool.
+      - FAIL if the re-executed result differs from the recorded result by any \
+        amount (exact Decimal match — no rounding tolerance).
+
+  (b) Statistical ops (compute_stat: mean, geo_mean, stdev, variance, CAGR, \
+      correlation, percentile, regression, etc.):
+      - Use the quant-stats skill at scratch/skills/quant-stats/.
+      - Read scripts/ for the matching function; invoke via the `execute` tool \
+        with the same inputs recorded in calc.txt.
+      - FAIL if outputs disagree beyond: absolute diff < 1e-6 OR relative diff \
+        < 1e-4 (whichever is tighter for the magnitude).
+
+  (c) Inflation adjustment (adjust_inflation / get_cpi_value):
+      - Use the cpi-inflation-adjuster skill at scratch/skills/cpi-inflation-adjuster/.
+      - Read the bundled CPI data (data/cpi_u.json) and/or invoke the skill's \
+        script via `execute` with the same source/target period and amount.
+      - FAIL on relative diff > 1e-4.
+
+  (d) FX conversion (convert_fx):
+      - Use the historical-fx skill at scratch/skills/historical-fx/.
+      - Invoke the skill's script via `execute` with the same date and rate \
+        convention (spot / monthly avg / annual avg) recorded in calc.txt.
+      - FAIL on relative diff > 1e-4.
+
+NEVER approve a compute_stat / adjust_inflation / convert_fx result by eyeballing \
+the formula — always re-run via the matching skill. `calculate` alone is \
+sufficient ONLY for basic +/-/*/ arithmetic.
 
 SKIP this check only if calc.txt is absent or unparseable AND the answer type does not \
 require arithmetic (use your judgment — e.g., a direct lookup answer with no calculation).
@@ -133,9 +174,9 @@ require arithmetic (use your judgment — e.g., a direct lookup answer with no c
 If calc.txt references a compute_stat call, verify the variant field matches what the \
 question explicitly requested. Common traps:
 
-  - "population standard deviation" → variant must contain "population" (ddof=0), \
+  - "population standard deviation" -> variant must contain "population" (ddof=0), \
     NOT "sample" (ddof=1). FAIL if the wrong variant was used.
-  - "sample standard deviation" → variant must contain "sample" (ddof=1).
+  - "sample standard deviation" -> variant must contain "sample" (ddof=1).
   - Percentile methods: if the question specifies "Type 7", "Hazen", "inclusive", or \
     "exclusive", the variant must match. Default numpy percentile (linear interpolation) \
     is Type 7 — only FAIL if a different method was explicitly requested.
@@ -151,15 +192,15 @@ with no compute_stat calls.
 Re-read the original question (from the task description) and verify the answer respects \
 ALL explicit constraints. Common traps to check:
 
-  - "use only reported monthly values" → evidence must contain monthly rows, NOT annual aggregates
-  - "fiscal year" vs "calendar year" → extracted_values.txt tags must match what was asked
-  - "exclude X" / "non-agency" / "marketable only" → verify excluded items are not in the sum
-  - "most recently published" vs "as reported" → verify correct bulletin vintage was used
-  - "as of [date]" → verify the data point matches that exact date, not a different period
+  - "use only reported monthly values" -> evidence must contain monthly rows, NOT annual aggregates
+  - "fiscal year" vs "calendar year" -> extracted_values.txt tags must match what was asked
+  - "exclude X" / "non-agency" / "marketable only" -> verify excluded items are not in the sum
+  - "most recently published" vs "as reported" -> verify correct bulletin vintage was used
+  - "as of [date]" -> verify the data point matches that exact date, not a different period
   - Rounding instructions ("nearest hundredths", "two decimal places", "round to nearest integer") \
-    → verify the proposed answer has the correct precision
-  - "percent" vs "decimal" → verify the answer uses the requested form
-  - "in [year] dollars" / "constant dollars" → verify inflation adjustment was applied
+    -> verify the proposed answer has the correct precision
+  - "percent" vs "decimal" -> verify the answer uses the requested form
+  - "in [year] dollars" / "constant dollars" -> verify inflation adjustment was applied
 
 FAIL if any explicit instruction in the question was violated by the evidence or answer.
 
@@ -178,15 +219,59 @@ conversion, or external macro series), verify:
 
 SKIP this check if no external data joins are present in calc.txt.
 
-### Check 7: Format Match (SOFT WARNING — does NOT cause FAIL)
+### Check 7: Benchmark Format Match (SOFT WARNING — does NOT cause FAIL)
 
-The proposed answer should match standard normalizer format patterns:
-  - Percentages end with "%" and have at most 2 decimal places
-  - Dollar amounts use "$" prefix or appropriate currency notation
-  - Year ranges use consistent separators
-  - Numbers avoid unnecessary trailing zeros
+The benchmark expects answers in specific formats. Compare the proposed answer against \
+these known answer patterns from the benchmark:
 
-WARN (add to issues list) but do NOT set status to "FAIL" for cosmetic format mismatches.
+**Numeric formats:**
+- Plain integers: 507, 42, 73 (no commas for numbers under 1000)
+- Comma-separated integers: 2,602 / 44,463 / 103,375 (commas for thousands in large numbers \
+  — BUT many answers omit commas: 103030, 180681, 92000000)
+- Decimals: 0.42, 32.703, 81.406, 0.00262 (varying precision — use the precision the question \
+  requests, or the natural precision of the computation)
+- Large decimals: 25258095.24, 935851121560 (no commas, no scientific notation)
+
+**Percentage formats:**
+- With % symbol: 1608.80%, 9.89%, -18.51%, 69%, 3%
+- Precision varies: 9.987% (3 decimal), 1608.80% (2 decimal), 69% (integer)
+- When the question says "percent value" or "reported as a percent", use % suffix
+- When the question says "decimal" (e.g., "0.1234, not 12.34%"), do NOT add %
+
+**Currency formats:**
+- Dollar sign prefix: $37,921,314, $2,760.44, $140.9 Billion
+- Only use $ when the question asks for a dollar-denominated final answer
+- Unit suffixes: "million", "millions", "billion", "Billion" (capitalization varies)
+
+**Unit-labeled formats:**
+- Number followed by unit: 36080 million, 997.3 billion, 1169.41 million, -1,667.86 millions
+- Use the unit scale the question specifies ("in millions", "in billions")
+
+**List/tuple formats:**
+- Bracketed comma-separated: [0.096, -184.143], [2.81, 0.030, 8.706]
+- Mixed types: [2017, 0.69], [0.012, surplus], [2.59%, 2.34%, Decreased]
+- Use lists when the question asks for multiple distinct values
+
+**Date formats:**
+- Full date: March 3, 1977
+- Month and year: August 1986
+- Year only: 1990, 1973
+
+**Negative values:**
+- Standard minus: -118255.5, -0.119, -18.51%
+- Unicode minus (U+2212): \u22123.524, \u2212156.11 (both are acceptable)
+
+**Format validation rules:**
+1. If the question specifies rounding ("nearest hundredths", "two decimal places"), verify \
+   precision matches
+2. If the question specifies unit format ("in millions", "as a percent value"), verify \
+   unit/suffix matches
+3. If the question asks for multiple values, verify list format [val1, val2, ...]
+4. Trailing zeros: 1608.80% is valid (question asked for "hundredths place")
+5. No scientific notation — benchmark never uses it
+
+WARN (add to issues list with specific format concern) but do NOT set status to "FAIL" \
+for format mismatches.
 
 ### Check 8: Plausibility (SOFT WARNING — does NOT cause FAIL)
 
@@ -218,9 +303,9 @@ Rules:
 
 After determining the outcome, record it in the audit trail using the read-then-write \
 append pattern (FilesystemMiddleware has no native append mode — write_file always overwrites):
-  1. read_file("UID/verification.txt") to get current content (may be empty or absent — use empty string if absent)
+  1. read_file("scratch/UID/verification.txt") to get current content (may be empty or absent — use empty string if absent)
   2. Concatenate: current_content + new attempt record
-  3. write_file("UID/verification.txt", combined_content)
+  3. write_file("scratch/UID/verification.txt", combined_content)
 
 Format for each attempt record:
   Attempt N: Status: <PASS|FAIL|ERROR> | Checks: evidence: <PASS|FAIL|SKIP>, units: <PASS|FAIL|SKIP>, arithmetic: <PASS|FAIL|SKIP>, formula_variant: <PASS|FAIL|SKIP>, instruction_fidelity: <PASS|FAIL|SKIP>, cross_source: <PASS|FAIL|SKIP>, format: <PASS|WARN|SKIP>, plausibility: <PASS|WARN|SKIP> | Token: <token or null>

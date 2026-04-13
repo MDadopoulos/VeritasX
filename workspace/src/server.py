@@ -60,13 +60,13 @@ def _validate_startup() -> int:
         Number of corpus .txt files found.
 
     Raises:
-        RuntimeError: If GOOGLE_CLOUD_PROJECT is unset or corpus is missing/empty.
+        RuntimeError: If GOOGLE_API_KEY is unset or corpus is missing/empty.
     """
-    project = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+    project = os.environ.get("GOOGLE_API_KEY", "")
     if not project:
         raise RuntimeError(
-            "GOOGLE_CLOUD_PROJECT env var is required but not set. "
-            "Set it to your GCP project ID before starting the server."
+            "GOOGLE_API_KEY env var is required but not set. "
+            "Set it to your API key before starting the server."
         )
 
     corpus_dir_env = os.environ.get("CORPUS_DIR", "corpus/transformed")
@@ -131,12 +131,12 @@ def build_app():
     corpus_count = _validate_startup()
     _app_meta["corpus_file_count"] = corpus_count
 
-    max_runs = int(os.environ.get("MAX_CONCURRENT_RUNS", "4"))
+    max_runs = int(os.environ.get("MAX_CONCURRENT_RUNS", "3"))
     timeout = float(os.environ.get("AGENT_TIMEOUT_SECONDS", "3000"))
 
     skill = AgentSkill(
-        id="officeqa",
-        name="OfficeQA Finance Agent",
+        id="veritasx",
+        name="VeritasX",
         description=(
             "Answers fiscal/financial questions from US Treasury bulletin "
             "corpus (1939-2025). Supports lookups, percentage changes, "
@@ -147,8 +147,8 @@ def build_app():
     )
 
     agent_card = AgentCard(
-        name="OfficeQA Finance Agent",
-        description="RAG agent over US Treasury bulletins, 1939-2025",
+        name="VeritasX",
+        description="Agent over US Treasury bulletins, 1939-2025",
         url=f"http://0.0.0.0:{PORT}/",
         version="1.0.0",
         default_input_modes=["text"],

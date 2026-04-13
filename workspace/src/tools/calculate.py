@@ -203,22 +203,23 @@ def pct_change(old: float, new: float, unit_old: Optional[str] = None, unit_new:
 _UNIT_RE = re.compile(r"\b(millions?|billions?|thousands?)\b", re.IGNORECASE)
 
 
-def sum_values(pairs: list, expected_count: int) -> dict:
+def sum_values(labels: list[str], values: list[float], expected_count: int) -> dict:
     """
-    Sum a list of (label, value) pairs, enforcing an expected count.
+    Sum a parallel list of (label, value) entries, enforcing an expected count.
 
     CORPUS CONTEXT: Use this to sum multiple values extracted from Treasury
     bulletin tables (e.g., monthly totals). Always include units from the
-    table header (e.g., "millions").
+    table header (e.g., "millions") inside each label.
 
-    If the number of pairs does not match expected_count, returns COUNT_MISMATCH.
+    If len(labels) != len(values) or != expected_count, returns COUNT_MISMATCH.
     If a value cannot be converted to Decimal, returns INVALID_INPUT.
     If labels contain heterogeneous unit words (e.g. "millions" and "billions"),
     includes a "unit_warning" field in the success result — does NOT reject.
 
     Args:
-        pairs:          List of (label: str, value: any) tuples.
-        expected_count: Exact number of pairs expected.
+        labels:         List of label strings, one per value.
+        values:         List of numeric values, parallel to labels.
+        expected_count: Exact number of values expected.
 
     Returns:
         {"result": Decimal, "pair_count": int}                    on success
@@ -226,8 +227,17 @@ def sum_values(pairs: list, expected_count: int) -> dict:
         {"error": "COUNT_MISMATCH", "reason": ..., "actual_count": int}
         {"error": "INVALID_INPUT", "reason": ...}
     """
-    if not isinstance(pairs, list):
-        return {"error": "INVALID_INPUT", "reason": f"pairs must be a list, got {type(pairs).__name__}"}
+    if not isinstance(labels, list) or not isinstance(values, list):
+        return {"error": "INVALID_INPUT", "reason": "labels and values must be lists"}
+
+    if len(labels) != len(values):
+        return {
+            "error": "COUNT_MISMATCH",
+            "reason": f"labels ({len(labels)}) and values ({len(values)}) length mismatch",
+            "actual_count": min(len(labels), len(values)),
+        }
+
+    pairs = list(zip(labels, values))
 
     if len(pairs) != expected_count:
         return {

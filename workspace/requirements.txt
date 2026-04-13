@@ -1,13 +1,29 @@
-langchain-google-genai==4.2.1
-langchain-google-vertexai[anthropic]==3.2.2
+# --- Core LLM & Orchestration ---
+langchain-core>=1.2.0
+langchain>=0.4.0
+langsmith>=0.7.0
+langgraph>=1.0.0
+langchain-google-genai>=4.2.1
+langchain-google-vertexai[anthropic]>=3.2.2
+deepagents>=0.4.11
+
+# --- Search & Data ---
 rank-bm25==0.2.2
-python-dotenv>=1.0
-pytest>=8.0
-pytest-timeout>=2.3
-deepagents==0.4.11
+
+# --- Web Server ---
 fastapi>=0.115
 uvicorn[standard]>=0.32
-pytest-anyio
-asgi-lifespan>=2.1
 httpx>=0.25
 a2a-sdk[http-server]>=0.3.20,<1.0
+
+# --- Utilities ---
+python-dotenv>=1.0
+pydantic>=2.10
+
+# --- Testing ---
+pytest>=8.0
+pytest-timeout>=2.3
+pytest-anyio
+asgi-lifespan>=2.1
+numpy
+scipy

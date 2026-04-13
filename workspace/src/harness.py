@@ -4,7 +4,8 @@ harness.py — Custom middleware assembly harness for the DeepAgents orchestrato
 Replaces the opaque create_deep_agent() call with a purpose-built middleware stack
 that isolates corpus retrieval inside a dedicated search subagent, keeping raw BM25
 span text out of the orchestrator's context window. The verifier subagent is also
-registered here (VER-01).
+registered here (VER-01). Calc-agent and external-data-agent handle arithmetic and
+external data lookups respectively.
 
 Public API:
     ORCHESTRATOR_SYSTEM_PROMPT   str                  — Orchestrator system prompt (source of truth)
@@ -20,8 +21,9 @@ from pathlib import Path
 # Portable scratch-directory resolution (replaces hardcoded Windows path)
 # ---------------------------------------------------------------------------
 _PROJECT_ROOT = Path(__file__).parent.parent.parent  # workspace/src/ -> workspace/ -> project root
-_DEFAULT_SCRATCH = _PROJECT_ROOT / "agentspace" / "scratch"
-SCRATCH_DIR = Path(os.environ.get("SCRATCH_DIR", str(_DEFAULT_SCRATCH)))
+_DEFAULT_AGENTSPACE = _PROJECT_ROOT / "agentspace"
+AGENTSPACE_DIR = Path(os.environ.get("AGENTSPACE_DIR", str(_DEFAULT_AGENTSPACE)))
+SCRATCH_DIR = Path(os.environ.get("SCRATCH_DIR", str(AGENTSPACE_DIR / "scratch")))
 
 # ---------------------------------------------------------------------------
 # Orchestrator system prompt (source of truth for harness)
@@ -61,199 +63,106 @@ Keep working until the task is fully complete. Don't stop partway and explain wh
 For longer tasks, provide brief progress updates at reasonable intervals — a concise sentence recapping what you've done and what's next."""  # noqa: E501
 
 ORCHESTRATOR_SYSTEM_PROMPT: str = """\
+You are the orchestrator of a multi-agent pipeline that answers financial questions
+grounded in the US Treasury Bulletin corpus. You coordinate specialist subagents;
+you do not retrieve corpus data or perform arithmetic yourself.
+
+## Core Behavior
+
+- Be concise and direct. No preamble ("Sure!", "Great question!", "I'll now...") — just act.
+- Prioritize accuracy over validating user phrasing; disagree respectfully when wrong.
+- Avoid unnecessary superlatives, praise, or emotional validation.
+- Keep working until the task is fully complete. Don't stop partway to explain.
+- If something fails repeatedly, stop and analyze *why* before retrying.
+- If you're blocked, say what's wrong and ask for guidance.
+
+## UID Convention (applies to ALL subagent calls)
+
+Every subagent description MUST begin with 'UID: {uid} | Task: ...'. The {uid}
+comes from the question preamble ("Question UID: ..."). Subagents use the UID
+to locate scratch files under scratch/{uid}/.
+
 ## Mandatory Planning Gate
 
-Before calling ANY tool, you MUST first call write_todos with at minimum:
+Before calling ANY tool, call write_todos with:
 1. A restatement of the question as you understand it.
-2. Your planned tool call sequence in order.
+2. Your planned subagent call sequence in order.
+3. The exact output format requested by the question, so you do not forget it.
 
-You may update the todo list mid-run as new evidence changes the plan.
-Mark items as completed (status: "completed") as you finish each step.
+Update the todo list mid-run as evidence changes the plan. Mark items completed
+as soon as each step finishes.
 
 ## Question Decomposition (BEFORE calling the search agent)
 
-Before tasking the search agent, decompose the question into two distinct parts:
+Decompose the question into three parts:
 
 1. SOURCE CONSTRAINT — which table or bulletin to retrieve from.
-   This is often phrased as: "according to the table for X", "using only the Y report",
-   "from the breakdown covering years A–B", "as reported in the Z series".
-   → This tells the search agent WHAT TABLE to find.
+   Phrased as: "according to the table for X", "using only the Y report",
+   "from the breakdown covering years A-B", "as reported in the Z series".
+   -> Tells the search agent WHAT TABLE to find.
 
-2. COMPUTATION RANGE — which values to extract from that table for calculation.
-   This is often a sub-range within the source: "for each month from M1 to M2",
-   "for fiscal years N1 through N2", "the values reported for Q".
-   → This tells the search agent WHICH ROWS to extract from the table.
+2. COMPUTATION RANGE — which values to extract from that table.
+   Phrased as: "for each month from M1 to M2", "for fiscal years N1 through N2".
+   -> Tells the search agent WHICH ROWS to extract. Goes into your calc step.
 
-These are NOT the same thing. A question may say:
-  "From the 1940–1949 decade table, compute the geometric mean for March 1942 – October 1948"
-  Source constraint = find the 1940–1949 decade table
-  Computation range = extract monthly rows March 1942 – October 1948 from that table
+   These are NOT the same thing. Example:
+     "From the 1940-1949 decade table, compute the geometric mean for March 1942 - October 1948"
+     Source constraint = find the 1940-1949 decade table
+     Computation range = extract monthly rows March 1942 - October 1948
 
-3. DATA VINTAGE — does the question want originally reported or revised figures?
-   Keywords signaling REPORTED (first-published, as-printed) values:
-     "reported", "as reported", "breakdown of", "according to the … breakdown"
-   Keywords signaling REVISED values:
-     "revised", "final", "adjusted"
-   If the question says "reported" or similar, tell the search agent to prefer the
-   EARLIEST bulletin that contains the complete table — later bulletins may carry
-   revised/adjusted figures that differ from the originally reported numbers.
-   If no vintage signal is present, default to the earliest complete source.
+3. DATA VINTAGE — originally reported or revised figures?
+   REPORTED keywords: "reported", "as reported", "breakdown of", "according to the ... breakdown"
+   REVISED keywords: "revised", "final", "adjusted"
+   If "reported", tell the search agent to prefer the EARLIEST bulletin containing
+   the complete table. Default to earliest complete source if no vintage signal.
 
-The task you send to the search agent must describe the SOURCE CONSTRAINT (which table)
-and the DATA VINTAGE (reported vs revised) if the question signals one.
-The computation range goes into your calculation step.
+The task you send to search-agent must describe SOURCE CONSTRAINT and DATA VINTAGE.
 
-## Retrieval via Search Agent
+## Parallel Search
 
-To retrieve financial data from the corpus, call the search agent with the UID prefix:
-  task(subagent_type='search-agent', description='UID: {uid} | Task: <plain English task>')
+When a question needs data from INDEPENDENT sources (comparing two table families,
+cross-checking reported vs revised across bulletins), launch multiple search-agent
+calls in a SINGLE turn — they run in parallel. Do NOT parallelize when the second
+search depends on results from the first.
 
-Example: task(subagent_type='search-agent',
-              description='UID: UID0001 | Task: Find defense expenditures for FY1940 across all relevant files')
+## Pipeline Ordering
 
-IMPORTANT: Every search-agent call MUST include 'UID: {uid} |' at the start of the description.
-The {uid} value comes from the question preamble ("Question UID: ...").
+The search-agent retrieves Treasury corpus data. For questions requiring external data:
+1. FIRST retrieve all Treasury values via search-agent
+2. THEN apply external data via external-data-agent (adjust_inflation, convert_fx)
+3. THEN apply calculations via calc-agent (compute_stat, calculate, etc.)
+4. All external-data-agent and calc-agent results land in scratch/{uid}/calc.txt
 
-The search agent writes evidence to {uid}/evidence.txt and extracted values to {uid}/extracted_values.txt.
-It returns ONLY a file pointer — do NOT expect inline data.
+When to route to which subagent:
+  - "in X dollars" / "constant dollars" / "real terms" -> external-data-agent (adjust_inflation)
+  - "convert to [currency]" / cross-country comparison -> external-data-agent (convert_fx)
+  - Statistical ops (SD, correlation, regression, CAGR, etc.) -> calc-agent (compute_stat)
+  - Simple arithmetic (+, -, *, /, %) -> calc-agent (calculate, pct_change, sum_values)
 
-Do NOT call route_files, search_in_file, or extract_table_block directly.
+## Filesystem Usage
 
-## Parallel Search Agents
+You may freely use the filesystem tools (read_file, write_file, ls, etc.) on scratch
+files to inspect evidence, extracted values, calc results, and to write the final
+answer.txt. Do NOT use them to search the corpus — that is the search-agent's job.
 
-When a question requires data from INDEPENDENT sources (e.g., comparing two different
-table families, or cross-checking reported vs revised figures from different bulletins),
-you may launch multiple search-agent calls in a SINGLE turn. They will run in parallel.
+After the search-agent completes, read scratch/{uid}/extracted_values.txt for the values you
+need. Every numeric value you pass to calc-agent MUST include its unit; write
+"(unit unknown)" if unclear.
 
-  Example — two independent retrievals in one turn:
-    task(subagent_type='search-agent',
-         description='UID: UID0005 | Task: Find CY 1940-1949 budget expenditures from earliest complete bulletin (reported values)')
-    task(subagent_type='search-agent',
-         description='UID: UID0005 | Task: Find FY1945 debt outstanding from nearest month-end bulletin')
+## Verification and Finalization
 
-Do NOT parallelize when the second search depends on results from the first.
-Use a single search agent when one bulletin can answer the entire question.
+Before calling normalize_answer, call the verifier with the proposed answer and an
+evidence summary. Only call normalize_answer after receiving a PASS; pass the
+verifier's token as the verification_token parameter.
 
-## Scratch File Writing Instructions
-
-After the search-agent completes, read {uid}/extracted_values.txt to get the values for calculation.
-EVERY numeric value MUST include its unit. If unit is unclear, write (unit unknown).
-
-After EACH calculate/pct_change/sum_values result, APPEND to {uid}/calc.txt:
-  Format: expression, labeled inputs with source file, result
-  Example:
-    pct_change(2602, 3100)
-    Inputs: defense_1940=2602 (millions) [source: treasury_bulletin_1940_03.txt],
-            defense_1941=3100 (millions) [source: treasury_bulletin_1941_03.txt]
-    Result: 19.14%
-
-After completing all calculations, call normalize_answer with your final answer string.
-
-After calling normalize_answer, WRITE to {uid}/answer.txt:
+After normalize_answer returns, write scratch/{uid}/answer.txt:
   Line 1: the normalized answer string
   Line 2: a one-sentence rationale
   Example:
     19.14%
     pct_change from 2602 to 3100 over FY1940
 
-## Tool Usage Rules
-
-- NEVER compute percent change with inline arithmetic. ALWAYS use the pct_change tool.
-- NEVER generate arithmetic formulas inline. ALWAYS use calculate() for all arithmetic.
-- NEVER use glob, read_file, or search tools to access the corpus directly. ALL corpus retrieval MUST go through the search agent. Your filesystem tools are for scratch files only.
-
-## Verification
-
-Before calling normalize_answer, call the verifier with the UID prefix:
-  task(subagent_type='verifier', description='UID: {uid} | <answer> | Evidence: <summary>')
-
-Only call normalize_answer after receiving a PASS from the verifier.
-Pass the verifier's token to normalize_answer as the verification_token parameter.
-
-## Statistical Computation (compute_stat)
-
-For any nontrivial statistical computation, use compute_stat(metric, data).
-NEVER attempt statistics via inline arithmetic or chained calculate() calls.
-
-Available metrics (pass as the `metric` parameter):
-  Central tendency: mean, weighted_mean, geometric_mean, geometric_mean_return, trimmed_mean, median
-  Dispersion: std_dev, variance, mad, coefficient_of_variation, iqr
-  Correlation/regression: correlation, ols_regression, beta_capm
-  Growth/returns: simple_returns, log_returns, cagr, cumulative_return, annualised_return, annualised_volatility
-  Smoothing: sma, ema
-  Percentile-based: percentile, var_historical, cvar (Expected Shortfall)
-  Risk metrics: sharpe_ratio, sortino_ratio, max_drawdown, tracking_error, information_ratio
-  Concentration: hhi, cr_k, gini
-  Time-series: difference, autocorrelation
-  Elasticity: percentage_change, arc_elasticity
-  Trend: linear_trend
-
-The `data` parameter is a JSON string. Examples:
-  compute_stat("std_dev", '{"values": [1,2,3,4,5], "population": true}')
-  compute_stat("cagr", '{"start_value": 100, "end_value": 200, "years": 10}')
-  compute_stat("correlation", '{"x": [1,2,3], "y": [4,5,6], "method": "pearson"}')
-  compute_stat("percentile", '{"values": [1,2,3,4,5], "percentile": 75}')
-  compute_stat("cvar", '{"returns": [-0.02, 0.01, -0.05], "alpha": 5, "as_decimal": true}')
-
-CRITICAL formula variant rules:
-  - "population standard deviation" → {"population": true} (uses n, not n-1)
-  - "sample standard deviation" → {"population": false} (uses n-1)
-  - Default is SAMPLE (population=false) — only use population=true if question says so
-  - For correlation, check if question specifies Pearson/Spearman/Kendall
-  - For returns, check if question provides decimals (as_decimal=true) or percentages
-
-After each compute_stat call, APPEND to {uid}/calc.txt:
-  Format: compute_stat("{metric}", <data summary>)
-  Result: <value>
-  Variant: <variant from result>
-
-## Inflation Adjustment (adjust_inflation / get_cpi_value)
-
-When a question requires converting nominal dollars to constant (real) dollars,
-or asks about purchasing power, use adjust_inflation or get_cpi_value.
-
-  adjust_inflation(amount, from_year, to_year, from_month=None, to_month=None)
-  → Returns: {"original_amount", "adjusted_amount", "from_cpi", "to_cpi", "multiplier"}
-
-  get_cpi_value(year, month=None)
-  → Returns: {"cpi_value": float, "period": str, "base": "1982-1984=100"}
-
-Examples:
-  adjust_inflation(1000, 1950, 2020)  → 1950 dollars to 2020 dollars
-  adjust_inflation(500, 1980, 1970, from_month="Mar", to_month="Mar")  → specific months
-  get_cpi_value(1970, "March")  → raw CPI index for March 1970
-
-CRITICAL: When the question specifies a base month (e.g., "in March 1970 dollars"),
-use the month parameters. When it says just "in 1970 dollars", use annual averages.
-
-## Currency Conversion (convert_fx)
-
-When a question requires converting between currencies, use convert_fx.
-Uses Fed H.10 exchange rates (1971-2025, 25+ currencies). DEM auto-chains through EUR post-1998.
-
-  convert_fx(amount, from_currency, to_currency, date, convention=None)
-  → Returns: {"converted_amount", "date_used", "rate_raw", "convention", ...}
-
-Date formats: "YYYY-MM-DD" (spot), "YYYY-MM" (monthly avg), "YYYY" (annual avg)
-Convention inferred from date precision, or explicit: "spot", "monthly_avg", "annual_avg", "first_of_month"
-
-Examples:
-  convert_fx(1000, "USD", "JPY", "2020-03-15")  → spot rate
-  convert_fx(500, "GBP", "USD", "1985", convention="annual_avg")
-  convert_fx(1000, "USD", "DEM", "1995-06", convention="monthly_avg")
-
-## External Data Decision Rules
-
-The search agent retrieves Treasury corpus data. For questions requiring external data:
-1. FIRST retrieve all Treasury values via the search agent
-2. THEN apply external tools (adjust_inflation, convert_fx, compute_stat) to those values
-3. Record ALL external data lookups in {uid}/calc.txt with source labels
-
-When to use external data:
-  - "in X dollars" / "constant dollars" / "real terms" → adjust_inflation
-  - "convert to [currency]" / cross-country comparison → convert_fx
-  - Statistical operations (SD, correlation, regression, CAGR, etc.) → compute_stat
-  - Simple arithmetic (+, -, *, /, %) → calculate, pct_change, sum_values (existing tools)
+Crucially, when ending your turn, you MUST strictly adhere to any output formatting instructions specified in the original question. Rely on the format you recorded in your todos.
 """
 
 
@@ -274,7 +183,7 @@ Before ANY tool call, extract the UID from the task description and call write_t
 with a solid retrieval plan. Use the guidelines in the sections below to build it.
 
 ALL scratch file paths use the extracted UID as directory prefix:
-  {uid}/evidence.txt, {uid}/extracted_values.txt
+  scratch/{uid}/evidence.txt, scratch/{uid}/extracted_values.txt
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION 1 — IDENTIFY THE TABLE FAMILY FIRST
@@ -327,19 +236,19 @@ the ORIGINALLY PUBLISHED values — not later revisions.
 ## Timing heuristics by table family (use as priors, not hard rules)
 
   A. Monthly budget data
-     — Individual month values: bulletin 1–3 months after the data month
-     — Full CY N monthly table: early N+1 bulletins (Jan–Mar N+1)
+     — Individual month values: bulletin 1-3 months after the data month
+     — Full CY N monthly table: early N+1 bulletins (Jan-Mar N+1)
        * CY N expenditures via 13-month rolling table: January (N+1) bulletin
-         The table has 13 entries; CY N = the 12 values spanning Jan–Dec N
+         The table has 13 entries; CY N = the 12 values spanning Jan-Dec N
          (skip the Dec N-1 leading value and Jan N+1 trailing value if present)
        * Do NOT confuse FY rows and CY rows in the same table — check row labels
      — Long monthly series spanning many years: look for one later cumulative table
 
   B. Fiscal-year annual data
-     — Pre-1976 FY ends June 30: look in Jul–Dec of the same year
+     — Pre-1976 FY ends June 30: look in Jul-Dec of the same year
      — Post-1976 FY ends Sep 30: look first in December of the same year (3-month lag),
        then in the following year's early bulletins for revised figures
-     — Final revised figures may appear 1–2 years after the FY closes
+     — Final revised figures may appear 1-2 years after the FY closes
      — For many consecutive FY values: look for one later cumulative table (March is common)
 
   C. Debt / ownership / maturity schedules
@@ -354,18 +263,18 @@ the ORIGINALLY PUBLISHED values — not later revisions.
 
   E. Auction / financing operations
      — Announcement: bulletin before or during the auction month
-     — Results: bulletin 1–2 months after auction
+     — Results: bulletin 1-2 months after auction
 
   F. International finance / foreign claims / capital flows
-     — Reporting lag is typically 3–6 YEARS, not months
+     — Reporting lag is typically 3-6 YEARS, not months
      — Search bulletins from N+3 to N+6 for international data about year N
      — These appear as retrospective compilations, not rolling monthly tables
 
   G. ESF / reserve assets / FX positions
-     — 3–6 month reporting lag typical
+     — 3-6 month reporting lag typical
 
   H. Historical cumulative tables
-     — May appear in bulletins 5–10+ years after the data period
+     — May appear in bulletins 5-10+ years after the data period
      — One later bulletin often covers an entire decade
 
   I. Charts / figures
@@ -373,7 +282,7 @@ the ORIGINALLY PUBLISHED values — not later revisions.
 
 ## Multi-year range strategy
 
-  — Span ≤ 10 years: try one later bulletin that contains the full back-series
+  — Span <= 10 years: try one later bulletin that contains the full back-series
   — Span > 10 years: tile across bulletins ~5 years apart, using the same table family
   — For consecutive annual values: use the SAME bulletin month across years (March is most common)
 
@@ -386,7 +295,7 @@ SECTION 3 — EXECUTION: ROUTE, SEARCH, CONFIRM
 Pass a query that encodes table family + time scope, not just a year:
   Good: route_files("January 1941 national defense expenditures monthly")
   Good: route_files("March 1982 fiscal year 1981 annual budget outlays")
-  Weak: route_files("1940")  ← year alone is too vague
+  Weak: route_files("1940")  <- year alone is too vague
 
 For series-building questions requiring multiple bulletins, call route_files
 once per target bulletin (parallel calls in a single turn).
@@ -417,8 +326,8 @@ Never extract just because the year matches. Wrong table family = wrong answer.
   Priority 3: broader semantic match only if clearly justified and noted
 
 Examples of labels that are NOT equivalent without verification:
-  "National defense and associated activities" ≠ "Department of Defense"
-  "Public debt securities held by the public" ≠ "Gross federal debt"
+  "National defense and associated activities" != "Department of Defense"
+  "Public debt securities held by the public" != "Gross federal debt"
 
 ## Time semantics — tag every value
 
@@ -429,13 +338,13 @@ Every extracted value must be tagged with:
   — Whether figure is revised or preliminary (check footnotes)
 
 Common mixing errors to avoid:
-  — December 1953 data ≠ FY1953 annual total
-  — Month-end balance ≠ calendar-year total
-  — FY row ≠ CY row in the same rolling table
+  — December 1953 data != FY1953 annual total
+  — Month-end balance != calendar-year total
+  — FY row != CY row in the same rolling table
 
 ## If the first bulletin fails
 
-  1. Try adjacent months (±2 issues)
+  1. Try adjacent months (+/-2 issues)
   2. Try a later cumulative table from the same family
   3. Only then broaden to a different year range
 
@@ -448,7 +357,7 @@ SECTION 4 — WRITE EVIDENCE FILES (TOOL CALLS)
 After all search_in_file calls complete, write results using explicit file tool calls.
 These are tool calls — not text in your reply.
 
-Call write_file with file_path="{uid}/evidence.txt":
+Call write_file with file_path="scratch/{uid}/evidence.txt":
 
   Table family: {A/B/C/...}
   Source: {file_path}
@@ -464,7 +373,7 @@ Call write_file with file_path="{uid}/evidence.txt":
 Repeat one block per search result. Include the table family and label-match note
 so the orchestrator can assess confidence without re-reading the corpus.
 
-After all evidence is written, call write_file with file_path="{uid}/extracted_values.txt":
+After all evidence is written, call write_file with file_path="scratch/{uid}/extracted_values.txt":
 
   Format: one line per value:
     variable_name = value (unit) [CY/FY, year] [revised/preliminary if noted], source: filename
@@ -483,10 +392,79 @@ Stop searching once you have:
 Do not keep searching for "better" sources once the question is answerable.
 
 Return ONLY a completion pointer. Do NOT relay raw corpus text or numeric values:
-  "Evidence written to {uid}/evidence.txt. Extracted values written to {uid}/extracted_values.txt."
+  "Evidence written to scratch/{uid}/evidence.txt. Extracted values written to scratch/{uid}/extracted_values.txt."
 
 If no relevant data is found after exhausting the strategy, return:
   NO_DATA_FOUND: {table family tried} | {bulletins searched} | {explanation}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Calc-agent subagent system prompt
+# ---------------------------------------------------------------------------
+
+CALC_AGENT_SYSTEM_PROMPT: str = """\
+You are a calculation and statistics specialist. Your job is to perform arithmetic
+operations and statistical computations on values provided by the orchestrator.
+
+You receive pre-extracted numeric values (from the search-agent's scratch files)
+and a description of the computation needed.
+
+## Tools Available
+- calculate(expression) — safe arithmetic evaluation
+- pct_change(old, new) — percent change computation
+- sum_values(values, unit) — labeled sum
+- compute_stat(metric, data) — advanced statistical computation (see skill docs)
+
+## Execution Pattern
+1. Extract the UID from task description prefix: "UID: {uid} | Task: ..."
+2. Parse the computation request from the task description
+3. Execute the appropriate tool(s)
+4. APPEND results to scratch/{uid}/calc.txt using write_file (read first, then write combined)
+   Format per entry:
+     operation(args)
+     Inputs: var=value (unit) [source: file]
+     Result: value
+     Variant: variant_name (if compute_stat)
+5. Return ONLY a completion pointer: "Calculation complete. Results written to scratch/{uid}/calc.txt."
+
+## Critical Rules
+- NEVER compute arithmetic inline — ALWAYS use calculate() or compute_stat()
+- For population vs sample statistics, check if the task specifies which variant
+- For geometric mean vs arithmetic mean, use the one specified in the task
+- Record the variant used in calc.txt so the verifier can check formula fidelity
+"""
+
+
+# ---------------------------------------------------------------------------
+# External-data-agent subagent system prompt
+# ---------------------------------------------------------------------------
+
+EXTERNAL_DATA_AGENT_SYSTEM_PROMPT: str = """\
+You are an external data specialist for inflation adjustment and currency conversion.
+You access BLS CPI-U data (1939-2025) and Fed H.10 exchange rates (1971-2025).
+
+## Tools Available
+- adjust_inflation(amount, from_year, to_year, from_month, to_month) — CPI-U adjustment
+- get_cpi_value(year, month) — raw CPI-U index lookup
+- convert_fx(amount, from_currency, to_currency, date, convention) — Fed H.10 FX conversion
+
+## Execution Pattern
+1. Extract the UID from task description prefix: "UID: {uid} | Task: ..."
+2. Parse the external data request from the task description
+3. Execute the appropriate tool(s)
+4. APPEND results to scratch/{uid}/calc.txt using write_file (read first, then write combined)
+   Format per entry:
+     operation(args)
+     Source: BLS CPI-U / Fed H.10
+     Result: {structured result}
+5. Return ONLY a completion pointer: "External data lookup complete. Results written to scratch/{uid}/calc.txt."
+
+## Critical Rules
+- When adjusting inflation, verify date alignment: monthly CPI with monthly Treasury data,
+  annual CPI with annual Treasury data, unless the task explicitly allows mixing
+- For FX conversion, match the convention (spot/monthly_avg/annual_avg) to the date precision
+- Always record the base period and source in calc.txt for verifier traceability
 """
 
 
@@ -501,20 +479,132 @@ def create_harness_agent():
 
     Assembles the DeepAgents middleware manually (instead of using create_deep_agent)
     to achieve explicit tool isolation: retrieval tools are confined to the
-    search subagent; the orchestrator sees only calculation/normalization tools.
+    search subagent; the orchestrator is a pure coordinator with only normalize_answer.
+    Calc-agent handles all arithmetic/stats. External-data-agent handles CPI/FX.
 
     Returns:
         A compiled LangGraph agent (CompiledStateGraph) ready for .invoke().
     """
     from langchain.agents import create_agent
-    from langchain.agents.middleware import TodoListMiddleware
+    from langchain.agents.middleware import TodoListMiddleware, AgentMiddleware
+    from langchain_core.messages import ToolMessage
     from deepagents.middleware.filesystem import FilesystemMiddleware
+
+    class ToolErrorMiddleware(AgentMiddleware):
+        """Catch tool exceptions and return them as error ToolMessages so the
+        model can see the failure and adapt, instead of crashing the graph."""
+
+        def wrap_tool_call(self, request, handler):
+            try:
+                return handler(request)
+            except Exception as e:
+                tool_name = getattr(request.tool, "name", "unknown")
+                return ToolMessage(
+                    content=f"Tool '{tool_name}' failed: {type(e).__name__}: {e}",
+                    tool_call_id=request.tool_call["id"],
+                    status="error",
+                )
+
+        async def awrap_tool_call(self, request, handler):
+            try:
+                return await handler(request)
+            except Exception as e:
+                tool_name = getattr(request.tool, "name", "unknown")
+                return ToolMessage(
+                    content=f"Tool '{tool_name}' failed: {type(e).__name__}: {e}",
+                    tool_call_id=request.tool_call["id"],
+                    status="error",
+                )
+
+    class GeminiKeyRotateMiddleware(AgentMiddleware):
+        """Rotate AI Studio API keys on timeout / 429 / 503.
+
+        Reads GOOGLE_API_KEY, GOOGLE_API_KEY_2, GOOGLE_API_KEY_3 from env.
+        Each attempt uses `per_attempt_timeout` seconds; on transient failure
+        the next key is used. Non-transient errors propagate immediately.
+        """
+
+        def __init__(self, model_id: str, per_attempt_timeout: int = 180):
+            super().__init__()
+            self.model_id = model_id
+            self.per_attempt_timeout = per_attempt_timeout
+            keys = [
+                os.environ.get("GOOGLE_API_KEY"),
+                os.environ.get("GOOGLE_API_KEY_2"),
+                os.environ.get("GOOGLE_API_KEY_3"),
+            ]
+            self.keys = [k for k in keys if k]
+            if not self.keys:
+                raise RuntimeError(
+                    "GeminiKeyRotateMiddleware: no GOOGLE_API_KEY* env vars set"
+                )
+            self._idx = 0
+
+        def _build_model(self, key: str):
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            return ChatGoogleGenerativeAI(
+                model=self.model_id,
+                google_api_key=key,
+                timeout=self.per_attempt_timeout,
+            )
+
+        @staticmethod
+        def _is_transient(e: Exception) -> bool:
+            name = type(e).__name__
+            if name in {"DeadlineExceeded", "ResourceExhausted",
+                        "ServiceUnavailable", "TimeoutError",
+                        "ReadTimeout", "ConnectTimeout"}:
+                return True
+            msg = str(e).lower()
+            return any(s in msg for s in
+                       ("timeout", "429", "503", "deadline", "quota",
+                        "rate limit", "unavailable"))
+
+        def wrap_model_call(self, request, handler):
+            last_err = None
+            for attempt in range(len(self.keys)):
+                key = self.keys[(self._idx + attempt) % len(self.keys)]
+                try:
+                    req = request.override(model=self._build_model(key))
+                except Exception:
+                    req = request
+                try:
+                    result = handler(req)
+                    self._idx = (self._idx + attempt) % len(self.keys)
+                    return result
+                except Exception as e:
+                    if not self._is_transient(e):
+                        raise
+                    last_err = e
+                    print(f"[key-rotate] key#{attempt} failed ({type(e).__name__}); rotating")
+            self._idx = (self._idx + 1) % len(self.keys)
+            raise last_err
+
+        async def awrap_model_call(self, request, handler):
+            last_err = None
+            for attempt in range(len(self.keys)):
+                key = self.keys[(self._idx + attempt) % len(self.keys)]
+                try:
+                    req = request.override(model=self._build_model(key))
+                except Exception:
+                    req = request
+                try:
+                    result = await handler(req)
+                    self._idx = (self._idx + attempt) % len(self.keys)
+                    return result
+                except Exception as e:
+                    if not self._is_transient(e):
+                        raise
+                    last_err = e
+                    print(f"[key-rotate] key#{attempt} failed ({type(e).__name__}); rotating")
+            self._idx = (self._idx + 1) % len(self.keys)
+            raise last_err
     from deepagents.middleware.skills import SkillsMiddleware
     from deepagents.middleware.subagents import SubAgentMiddleware, SubAgent
     from deepagents.middleware.summarization import create_summarization_middleware
     from deepagents.middleware.patch_tool_calls import PatchToolCallsMiddleware
     from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
-    from deepagents.backends import LocalShellBackend,FilesystemBackend
+    from deepagents.backends import LocalShellBackend, FilesystemBackend
     from langgraph.checkpoint.memory import MemorySaver
     from deepagents._version import __version__
 
@@ -522,83 +612,92 @@ def create_harness_agent():
 
     # Step 1 — Model and backend (env-var-driven, portable)
     model = get_model()
+    orch_model = get_model("gemini-3.1-pro-preview")
 
+    # Shared AI Studio key-rotation middleware (used by orchestrator + all subagents).
+    # Triggers on timeout / 429 / 503 and rotates through GOOGLE_API_KEY[_2,_3].
+    _subagent_model_id = os.environ.get("MODEL_ID", "gemini-3-flash-preview")
+    _orch_model_id = os.environ.get("ORCH_MODEL_ID", "gemini-3.1-pro-preview")
+    key_rotate_sub = GeminiKeyRotateMiddleware(model_id=_subagent_model_id)
+    key_rotate_orch = GeminiKeyRotateMiddleware(model_id=_orch_model_id)
+
+    AGENTSPACE_DIR.mkdir(parents=True, exist_ok=True)
     SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
-    backend = LocalShellBackend(
-        root_dir=SCRATCH_DIR,
+    backend = FilesystemBackend(
+        root_dir=AGENTSPACE_DIR,
+        virtual_mode=True,
+    )
+    bash_backend = LocalShellBackend(
+        root_dir=AGENTSPACE_DIR,
         virtual_mode=True,
         inherit_env=True,
     )
-    search_backend = FilesystemBackend(
-        root_dir=SCRATCH_DIR,
-        virtual_mode=True,
-    )
-    # Step 1b — Skills middleware (orchestrator only)
-    # Skills live under agentspace/skills/, NOT under scratch
-    _SKILLS_DIR = _PROJECT_ROOT / "agentspace" / "skills"
-    skills_backend = FilesystemBackend(
-        root_dir=_SKILLS_DIR,
-        virtual_mode=True,
-    )
-    skills_mw = SkillsMiddleware(
-        backend=skills_backend,
-        sources=["/"],
-    )
-
     # Step 2 — Import retrieval tools (search subagent only)
     from src.tools.route_files import route_files
     from src.tools.search_in_file import search_in_file
     from src.tools.extract_table_block import extract_table_block
 
-    # Step 3 — Import orchestrator tools
+    # Step 3 — Import calc-agent tools
     from src.tools.calculate import calculate, pct_change, sum_values
-    from src.tools.normalize_answer import normalize_answer
     from src.tools.compute_stat import compute_stat
+
+    # Step 4 — Import external-data-agent tools
     from src.tools.external_data import adjust_inflation, get_cpi_value, convert_fx
 
-    # Step 4 — Import verifier tool
+    # Step 5 — Import orchestrator tools (normalize_answer only)
+    from src.tools.normalize_answer import normalize_answer
+
+    # Step 6 — Import verifier tool
     from src.tools.calculate import calculate as calculate_for_verifier
     from src.tools.verifier import VERIFIER_SYSTEM_PROMPT
 
-    # Step 5 — Build search subagent middleware stack (exact order from graph.py)
+    # Step 7 — Build search subagent middleware stack
     # NOTE: No SkillsMiddleware — search-agent is a pure retrieval worker
     search_middleware = [
+        ToolErrorMiddleware(),
+        key_rotate_sub,
         TodoListMiddleware(),
     ]
     search_middleware.extend([
-        FilesystemMiddleware(backend=search_backend),
-        create_summarization_middleware(model, search_backend),
+        FilesystemMiddleware(backend=backend),
+        create_summarization_middleware(model,backend),
         PatchToolCallsMiddleware(),
         AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
     ])
 
-    # Step 6 — Build search subagent spec (SubAgent TypedDict, new API)
+    # Step 8 — Build search subagent spec (SubAgent TypedDict, new API)
     search_subagent: SubAgent = {
         "name": "search-agent",
         "description": (
             "Corpus retrieval specialist. Call with 'UID: {uid} | Task: <description>'. "
-            "Searches the corpus, writes evidence to {uid}/evidence.txt and extracted "
-            "values to {uid}/extracted_values.txt. Returns ONLY a completion pointer."
+            "Searches the corpus, writes evidence to scratch/{uid}/evidence.txt and extracted "
+            "values to scratch/{uid}/extracted_values.txt. Returns ONLY a completion pointer."
         ),
         "system_prompt": SEARCH_AGENT_SYSTEM_PROMPT,
         "model": model,
-        "tools": [route_files, search_in_file, extract_table_block],
+        "tools": [route_files, search_in_file],#, extract_table_block],
         "middleware": search_middleware,
     }
 
-    # Step 7 — Build verifier subagent middleware stack (exact order from graph.py)
+    # Step 9 — Build verifier subagent middleware stack
     # NOTE: No SkillsMiddleware — verifier is unchanged per locked decision
+
+    calc_skills_mw = SkillsMiddleware(backend=bash_backend, sources=["/skills/"])
+
     verifier_middleware = [
+        ToolErrorMiddleware(),
+        key_rotate_sub,
         TodoListMiddleware(),
+        calc_skills_mw,
     ]
     verifier_middleware.extend([
-        FilesystemMiddleware(backend=backend),
-        create_summarization_middleware(model, backend),
+        FilesystemMiddleware(backend=bash_backend),
+        create_summarization_middleware(model, bash_backend),
         PatchToolCallsMiddleware(),
         AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
     ])
 
-    # Step 8 — Build verifier subagent spec (VER-01: registered with name "verifier")
+    # Step 10 — Build verifier subagent spec (VER-01: registered with name "verifier")
     verifier_subagent: SubAgent = {
         "name": "verifier",
         "description": (
@@ -607,50 +706,115 @@ def create_harness_agent():
         ),
         "system_prompt": VERIFIER_SYSTEM_PROMPT,
         "model": model,
-        "tools": [calculate_for_verifier],
+        "tools": [calculate_for_verifier, pct_change, sum_values, compute_stat],
         "middleware": verifier_middleware,
     }
 
-    ###CAN ADD GENERAL SUBAGENT AS WELL..abs
+    # Step 11 — Build calc-agent subagent middleware stack
+    # SkillsMiddleware for quant-stats skill
+    # _SKILLS_DIR = _PROJECT_ROOT / "agentspace" / "skills"
+    # calc_skills_dir = _SKILLS_DIR / "quant-stats"
+    # calc_skills_backend = LocalShellBackend(root_dir=_SKILLS_DIR, virtual_mode=True, inherit_env=True)
+    #calc_skills_mw = SkillsMiddleware(backend=bash_backend, sources=["/skills/"])
 
-    # Step 9 — Build orchestrator middleware stack (exact order from graph.py)
-    # Skills on orchestrator ONLY (Claudie principle: orchestrator reasons, workers execute)
-    orchestrator_middleware = [
+    calc_middleware = [
+        ToolErrorMiddleware(),
+        key_rotate_sub,
         TodoListMiddleware(),
-        #skills_mw,
+        calc_skills_mw,
+    ]
+    calc_middleware.extend([
+        FilesystemMiddleware(backend=bash_backend),
+        create_summarization_middleware(model, bash_backend),
+        PatchToolCallsMiddleware(),
+        AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
+    ])
+
+    # Step 12 — Build calc-agent subagent spec
+    calc_subagent: SubAgent = {
+        "name": "calc-agent",
+        "description": (
+            "Arithmetic and statistics specialist. Call with 'UID: {uid} | Task: <description>'. "
+            "Performs calculations using calculate, pct_change, sum_values, and compute_stat. "
+            "Writes results to scratch/{uid}/calc.txt. Returns ONLY a completion pointer."
+        ),
+        "system_prompt": CALC_AGENT_SYSTEM_PROMPT,
+        "model": model,
+        "tools": [calculate, pct_change, sum_values, compute_stat],
+        #"skills":["skills/quant-stats"],
+        "middleware": calc_middleware,
+    }
+
+    # Step 13 — Build external-data-agent subagent middleware stack
+    # SkillsMiddleware for cpi-inflation-adjuster + historical-fx skills
+    # ext_skills_backend = FilesystemBackend(root_dir=_SKILLS_DIR, virtual_mode=True)
+    # ext_skills_mw = SkillsMiddleware(backend=ext_skills_backend, sources=[
+    #     "/cpi-inflation-adjuster/",
+    #     "/historical-fx/",
+    # ])
+
+    ext_middleware = [
+        ToolErrorMiddleware(),
+        key_rotate_sub,
+        TodoListMiddleware(),
+        calc_skills_mw,
+    ]
+    ext_middleware.extend([
+        FilesystemMiddleware(backend=bash_backend),
+        create_summarization_middleware(model, bash_backend),
+        PatchToolCallsMiddleware(),
+        AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
+    ])
+
+    # Step 14 — Build external-data-agent subagent spec
+    ext_data_subagent: SubAgent = {
+        "name": "external-data-agent",
+        "description": (
+            "External data specialist for inflation and FX. Call with 'UID: {uid} | Task: <description>'. "
+            "Performs CPI adjustments and currency conversions. Writes results to scratch/{uid}/calc.txt. "
+            "Returns ONLY a completion pointer."
+        ),
+        "system_prompt": EXTERNAL_DATA_AGENT_SYSTEM_PROMPT,
+        "model": model,
+        "tools": [adjust_inflation, get_cpi_value, convert_fx],
+        "middleware": ext_middleware,
+    }
+
+    # Step 15 — Build orchestrator middleware stack (exact order from graph.py)
+    # No SkillsMiddleware on orchestrator — skills are on domain subagents now
+    orchestrator_middleware = [
+        ToolErrorMiddleware(),
+        key_rotate_orch,
+        TodoListMiddleware(),
     ]
     orchestrator_middleware.extend([
         FilesystemMiddleware(backend=backend),
         SubAgentMiddleware(
             backend=backend,
-            subagents=[search_subagent, verifier_subagent],
+            subagents=[search_subagent, verifier_subagent, calc_subagent, ext_data_subagent],
         ),
         create_summarization_middleware(model, backend),
         PatchToolCallsMiddleware(),
         AnthropicPromptCachingMiddleware(unsupported_model_behavior="ignore"),
     ])
 
-    ###if want to add the rest later..
-    ##if middleware:
-    ##    deepagent_middleware.extend(middleware)
-    #  if memory is not None:
-    #     deepagent_middleware.append(MemoryMiddleware(backend=backend, sources=memory))
-    # if interrupt_on is not None:
-    #     deepagent_middleware.append(HumanInTheLoopMiddleware(interrupt_on=interrupt_on))
+    # Step 16 — Combine system prompt (CRITICAL: create_agent() does NOT append BASE_AGENT_PROMPT)
+    final_system_prompt = ORCHESTRATOR_SYSTEM_PROMPT
 
-    # Step 10 — Combine system prompt (CRITICAL: create_agent() does NOT append BASE_AGENT_PROMPT)
-    final_system_prompt = ORCHESTRATOR_SYSTEM_PROMPT + "\n\n" + BASE_AGENT_PROMPT
+    # Step 17 — Call create_agent() and return
+    # Orchestrator tool list: ONLY [normalize_answer]
+    # All arithmetic, stats, retrieval, and external data tools are on subagents
+    # Wire LangSmith tracer if tracing is enabled
+    from langchain_core.tracers.langchain import LangChainTracer
+    _callbacks = []
+    if os.environ.get("LANGSMITH_TRACING", "").lower() == "true":
+        _callbacks.append(
+            LangChainTracer(project_name=os.environ.get("LANGSMITH_PROJECT", "default"))
+        )
 
-    # Step 11 — Call create_agent() and return
-    # Orchestrator tool list: [calculate, pct_change, sum_values, normalize_answer,
-    #                          compute_stat, adjust_inflation, get_cpi_value, convert_fx]
-    # route_files, search_in_file, extract_table_block are on the search subagent only
     agent = create_agent(
-        model,
-        tools=[calculate, pct_change, sum_values, normalize_answer,
-               compute_stat, adjust_inflation, get_cpi_value, convert_fx],
-        # tools=[calculate, pct_change, sum_values, normalize_answer,
-        #        compute_stat, adjust_inflation, get_cpi_value, convert_fx],
+        orch_model,
+        tools=[normalize_answer],
         middleware=orchestrator_middleware,
         system_prompt=final_system_prompt,
         checkpointer=MemorySaver(),
@@ -658,6 +822,7 @@ def create_harness_agent():
     ).with_config(
         {
             "recursion_limit": 10_001,
+            "callbacks": _callbacks,
             "metadata": {
                 "ls_integration": "deepagents",
                 "versions": {"deepagents": __version__},

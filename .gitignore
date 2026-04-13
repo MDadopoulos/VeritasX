@@ -1,0 +1,25 @@
+# Python / IDEs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+workspace/.venv/
+.claude/
+.planning/
+.pytest_cache/
+
+
+# Agent/Scratch files
+# We ignore the scratch data where the agent works, but NOT the skills folder!
+agentspace/scratch/
+agentspace/skills/.venv/
+
+# Environments & Keys
+.env
+workspace/.env
+tmp_*.py
+service_account.json
+**/service_account.json
+*.csv
+.coverage
+workspace/deepagents/

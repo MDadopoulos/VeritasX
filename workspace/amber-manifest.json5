@@ -1,39 +1,67 @@
-// AgentBeats registration manifest for OfficeQA Finance Agent
+// AgentBeats registration manifest for VeritasX
 // See: https://docs.agentbeats.dev/manifest/
 {
   manifest_version: "0.1.0",
 
   // Agent metadata
-  name: "OfficeQA Finance Agent",
+  name: "VeritasX",
   description: "RAG agent over US Treasury bulletins (1939-2025). Answers fiscal/financial questions with exact arithmetic grounded in local corpus.",
 
   // Configuration schema — env vars required at runtime
   config_schema: {
     properties: {
-      GOOGLE_CLOUD_PROJECT: {
+      GOOGLE_API_KEY: {
         type: "string",
-        description: "GCP project ID with Vertex AI API enabled",
+        description: "Your Gemini AI Studio API Key",
+      },
+      GOOGLE_API_KEY_2: {
+        type: "string",
+        description: "Your backup Gemini API Key 2",
+      },
+      GOOGLE_API_KEY_3: {
+        type: "string",
+        description: "Your backup Gemini API Key 3",
+      },
+      LANGSMITH_API_KEY: {
+        type: "string",
+        description: "LangSmith Tracing API Key",
       },
       MODEL_ID: {
         type: "string",
-        description: "LLM model identifier (e.g., gemini-2.0-flash, claude-sonnet-4-6)",
+        description: "LLM model identifier (e.g., gemini-3-flash-preview)",
       },
-      GOOGLE_APPLICATION_CREDENTIALS: {
+      ORCH_MODEL_ID: {
         type: "string",
-        description: "Path to GCP service account JSON key file",
+        description: "Orchestrator LLM model (e.g., gemini-3.1-pro-preview)",
       },
     },
-    required: ["GOOGLE_CLOUD_PROJECT"],
+    // We only require the primary keys. The rest can just cleanly fail over if not provided by AgentBeats.
+    required: ["GOOGLE_API_KEY", "MODEL_ID", "ORCH_MODEL_ID"],
   },
 
   // Docker program definition
   program: {
-    image: "ghcr.io/YOUR_ORG/officeqa-agent:latest",  // TODO: update with actual registry
+    image: "ghcr.io/mdadopoulos/veritasx:latest",
     entrypoint: ["python", "-m", "src.server"],
     env: {
-      GOOGLE_CLOUD_PROJECT: "$config.GOOGLE_CLOUD_PROJECT",
+      // Configuration passed via AgentBeats / GH Secrets
+      GOOGLE_API_KEY: "$config.GOOGLE_API_KEY",
+      GOOGLE_API_KEY_2: "$config.GOOGLE_API_KEY_2",
+      GOOGLE_API_KEY_3: "$config.GOOGLE_API_KEY_3",
+      LANGSMITH_API_KEY: "$config.LANGSMITH_API_KEY",
       MODEL_ID: "$config.MODEL_ID",
-      GOOGLE_APPLICATION_CREDENTIALS: "$config.GOOGLE_APPLICATION_CREDENTIALS",
+      ORCH_MODEL_ID: "$config.ORCH_MODEL_ID",
+      
+      // Static Configuration that applies automatically inside the container
+      LANGSMITH_TRACING: "true",
+      LANGCHAIN_TRACING_V2: "true",
+      LANGSMITH_ENDPOINT: "https://eu.api.smith.langchain.com",
+      LANGSMITH_PROJECT: "default",
+      CORPUS_SOURCE: "local",
+      AGENT_TIMEOUT_SECONDS: "3000",
+      
+      // We hardcode the container paths here, ignoring your local Windows paths!
+      SKILLS_DIR: "/home/agent/agentspace/skills"
     },
     network: {
       endpoints: [{ port: 9009 }],

@@ -1,0 +1,60 @@
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Secrets / local env
+.env
+.env.*
+**/.env
+**/.env.*
+**/service_account.json
+**/*.pem
+**/*.key
+
+# Python caches
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.tox
+.venv
+venv
+env
+
+# Tests & fixtures (not needed at runtime)
+workspace/tests
+**/tests
+**/test_*.py
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Planning / docs / agent tooling
+.claude
+.planning
+agentspace/**/.planning
+*.md
+!workspace/README.md
+
+# Data / local artifacts
+*.csv
+tmp_*.py
+workspace/scratch
+workspace/__pycache__
+deepagents
+
+# CI
+.github
+
+# Build junk
+*.log
+dist
+build
+*.egg-info
