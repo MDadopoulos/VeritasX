@@ -55,6 +55,7 @@
       LANGSMITH_ENDPOINT: "https://eu.api.smith.langchain.com",
       LANGSMITH_PROJECT: "default",
       CORPUS_SOURCE: "local",
+      CORPUS_DIR: "/home/agent/corpus/transformed",
       AGENT_TIMEOUT_SECONDS: "3000",
       SKILLS_DIR: "/home/agent/agentspace/skills",
     },
