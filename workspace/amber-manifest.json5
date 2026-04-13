@@ -64,15 +64,15 @@
       SKILLS_DIR: "/home/agent/agentspace/skills"
     },
     network: {
-      endpoints: [{ port: 9009 }],
+      endpoints: [
+        { name: "a2a_endpoint", port: 9009 },
+      ],
     },
   },
 
   // A2A endpoint declaration
   provides: {
-    a2a: { port: 9009 },
+    a2a: { kind: "a2a", endpoint: "a2a_endpoint" },
   },
-  exports: {
-    a2a: "a2a",
-  },
+  exports: { a2a: "a2a" },
 }
