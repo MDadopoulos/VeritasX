@@ -3,65 +3,58 @@
 {
   manifest_version: "0.1.0",
 
-  // Agent metadata
   name: "VeritasX",
   description: "RAG agent over US Treasury bulletins (1939-2025). Answers fiscal/financial questions with exact arithmetic grounded in local corpus.",
 
-  // Configuration schema — env vars required at runtime
+  // Only secrets go in config_schema; non-sensitive values are static env.
   config_schema: {
+    type: "object",
     properties: {
-      GOOGLE_API_KEY: {
+      google_api_key: {
         type: "string",
-        description: "Your Gemini AI Studio API Key",
+        secret: true,
+        description: "Gemini AI Studio API Key",
       },
-      GOOGLE_API_KEY_2: {
+      google_api_key_2: {
         type: "string",
-        description: "Your backup Gemini API Key 2",
+        secret: true,
+        description: "Backup Gemini API Key 2",
       },
-      GOOGLE_API_KEY_3: {
+      google_api_key_3: {
         type: "string",
-        description: "Your backup Gemini API Key 3",
+        secret: true,
+        description: "Backup Gemini API Key 3",
       },
-      LANGSMITH_API_KEY: {
+      langsmith_api_key: {
         type: "string",
-        description: "LangSmith Tracing API Key",
-      },
-      MODEL_ID: {
-        type: "string",
-        description: "LLM model identifier (e.g., gemini-3-flash-preview)",
-      },
-      ORCH_MODEL_ID: {
-        type: "string",
-        description: "Orchestrator LLM model (e.g., gemini-3.1-pro-preview)",
+        secret: true,
+        description: "LangSmith tracing API key",
       },
     },
-    // We only require the primary keys. The rest can just cleanly fail over if not provided by AgentBeats.
-    required: ["GOOGLE_API_KEY", "MODEL_ID", "ORCH_MODEL_ID"],
+    required: ["google_api_key"],
+    additionalProperties: false,
   },
 
-  // Docker program definition
   program: {
     image: "ghcr.io/mdadopoulos/veritasx:latest",
     entrypoint: ["python", "-m", "src.server"],
     env: {
-      // Configuration passed via AgentBeats / GH Secrets
-      GOOGLE_API_KEY: "$config.GOOGLE_API_KEY",
-      GOOGLE_API_KEY_2: "$config.GOOGLE_API_KEY_2",
-      GOOGLE_API_KEY_3: "$config.GOOGLE_API_KEY_3",
-      LANGSMITH_API_KEY: "$config.LANGSMITH_API_KEY",
-      MODEL_ID: "$config.MODEL_ID",
-      ORCH_MODEL_ID: "$config.ORCH_MODEL_ID",
-      
-      // Static Configuration that applies automatically inside the container
-      LANGSMITH_TRACING: "true",
-      LANGCHAIN_TRACING_V2: "true",
+      // Secrets sourced from config
+      GOOGLE_API_KEY: "${config.google_api_key}",
+      GOOGLE_API_KEY_2: "${config.google_api_key_2}",
+      GOOGLE_API_KEY_3: "${config.google_api_key_3}",
+      LANGSMITH_API_KEY: "${config.langsmith_api_key}",
+
+      // Static configuration
+      MODEL_ID: "gemini-3-flash-preview",
+      ORCH_MODEL_ID: "gemini-3.1-pro-preview",
+      LANGSMITH_TRACING: "false",
+      LANGCHAIN_TRACING_V2: "false",
       LANGSMITH_ENDPOINT: "https://eu.api.smith.langchain.com",
       LANGSMITH_PROJECT: "default",
       CORPUS_SOURCE: "local",
       AGENT_TIMEOUT_SECONDS: "3000",
-      
-      // We hardcode the container paths here, ignoring your local Windows paths!
-      SKILLS_DIR: "/home/agent/agentspace/skills"
+      SKILLS_DIR: "/home/agent/agentspace/skills",
     },
     network: {
       endpoints: [
@@ -70,7 +63,6 @@
     },
   },
 
-  // A2A endpoint declaration
   provides: {
     a2a: { kind: "a2a", endpoint: "a2a_endpoint" },
   },
