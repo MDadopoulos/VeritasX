@@ -26,6 +26,11 @@ ENV SERVER_PORT=9009
 ENV SERVER_HOST=0.0.0.0
 ENV CORPUS_DIR=/home/agent/corpus/transformed
 
+# Ensure the agent user owns everything it needs to read/write at runtime.
+# Scratch must exist and be writable; workspace and corpus must be readable.
+RUN mkdir -p /home/agent/agentspace/scratch \
+ && chown -R agent:agent /home/agent/agentspace /home/agent/workspace /home/agent/corpus
+
 # Expose A2A port
 EXPOSE 9009
 

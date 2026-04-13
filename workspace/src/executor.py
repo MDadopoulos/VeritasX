@@ -27,6 +27,21 @@ from a2a.utils.errors import ServerError
 
 logger = logging.getLogger(__name__)
 
+def _wrap_final(text: str) -> str:
+    """Wrap model output in <FINAL_ANSWER>...</FINAL_ANSWER> for the judge.
+
+    If the model already emitted the tags, return unchanged.
+    """
+    if not text:
+        return "<FINAL_ANSWER></FINAL_ANSWER>"
+    s = text.strip()
+    if "<FINAL_ANSWER>" in s and "</FINAL_ANSWER>" in s:
+        return s
+    # Use only the first line as the canonical answer (scratch/answer.txt convention)
+    first = s.splitlines()[0].strip()
+    return f"<FINAL_ANSWER>{first}</FINAL_ANSWER>"
+
+
 TERMINAL_STATES = {
     TaskState.completed,
     TaskState.canceled,
@@ -92,7 +107,7 @@ class OfficeQAAgentExecutor(AgentExecutor):
         if cached is not None:
             logger.info("Returning cached answer for uid=%s", uid)
             await updater.add_artifact(
-                [Part(root=TextPart(text=cached))], name="answer"
+                [Part(root=TextPart(text=_wrap_final(cached)))], name="answer"
             )
             await updater.complete()
             return
@@ -129,7 +144,7 @@ class OfficeQAAgentExecutor(AgentExecutor):
                 return
 
         await updater.add_artifact(
-            [Part(root=TextPart(text=answer))], name="answer"
+            [Part(root=TextPart(text=_wrap_final(answer)))], name="answer"
         )
         await updater.complete()
 
@@ -145,5 +160,5 @@ class OfficeQAAgentExecutor(AgentExecutor):
         if answer_file.exists():
             content = answer_file.read_text(encoding="utf-8").strip()
             if content:
-                return content.splitlines()[0].strip()
+                return content
         return None

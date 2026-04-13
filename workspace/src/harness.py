@@ -149,20 +149,74 @@ After the search-agent completes, read scratch/{uid}/extracted_values.txt for th
 need. Every numeric value you pass to calc-agent MUST include its unit; write
 "(unit unknown)" if unclear.
 
+## Numerical Formatting (read carefully — format mismatch = wrong answer)
+
+The judge fuzzy-matches the content of <FINAL_ANSWER>. The question itself
+dictates the required shape. Extract and follow it EXACTLY. Common dimensions:
+
+1. DECIMAL PRECISION — "to the nearest dollar", "to two decimal places",
+   "rounded to 1%", "to the nearest tenth of a percent".
+   • 19.1357 with "two decimals" -> 19.14 (banker's/standard round half up).
+   • 19.1357 with "nearest integer" -> 19.
+   • If no precision is specified, use sensible precision for the magnitude
+     (currency: 2 decimals; percents: 2 decimals; large counts: integer).
+
+2. UNIT / SCALE — "in billions", "in millions of dollars", "in thousands".
+   • If the question says "in millions" and you computed 3,100,000,000 dollars,
+     the answer is 3100 (not 3,100,000,000 and not "3.1 billion").
+   • If the question says "in billions" for that same figure, answer 3.1.
+   • Convert BEFORE rounding, not after.
+
+3. PERCENT vs RATIO — "what percent" / "percentage change" -> include "%".
+   • pct_change 0.1914 with "what percentage" -> 19.14%.
+   • pct_change 0.1914 with "as a decimal ratio" -> 0.19.
+
+4. CURRENCY SYMBOL — include "$" ONLY if the question uses it or asks for
+   a dollar amount. Don't invent symbols that aren't requested.
+
+5. SIGN — negative values must carry the minus sign. "Deficit" or "decrease"
+   in the question usually implies a negative; verify with the evidence.
+
+6. THOUSAND SEPARATORS — default to NO commas (1234567, not 1,234,567)
+   unless the question explicitly shows them in an example.
+
+7. TEXT ANSWERS — case-insensitive match, so casing doesn't matter, but
+   spelling and word order DO. Return exactly the token(s) asked for
+   (e.g., month name, agency acronym) with no extra prose.
+
+8. HYBRID ("X with value Y") — emit BOTH components joined in the order
+   the question uses. If both components matter, both must be correct.
+
+Record the required format in your planning todos BEFORE retrieval so it
+does not drift. After normalize_answer returns, sanity-check: does the
+value you are about to wrap in <FINAL_ANSWER> literally satisfy every
+formatting constraint in the question? If not, re-normalize.
+
 ## Verification and Finalization
 
 Before calling normalize_answer, call the verifier with the proposed answer and an
 evidence summary. Only call normalize_answer after receiving a PASS; pass the
 verifier's token as the verification_token parameter.
 
-After normalize_answer returns, write scratch/{uid}/answer.txt:
-  Line 1: the normalized answer string
-  Line 2: a one-sentence rationale
-  Example:
-    19.14%
-    pct_change from 2602 to 3100 over FY1940
+After normalize_answer returns, write scratch/{uid}/answer.txt with BOTH
+tag blocks, in this exact order:
 
-Crucially, when ending your turn, you MUST strictly adhere to any output formatting instructions specified in the original question. Rely on the format you recorded in your todos.
+  <REASONING>one concise sentence explaining how the answer was derived</REASONING>
+  <FINAL_ANSWER>the normalized answer string</FINAL_ANSWER>
+
+Example:
+  <REASONING>pct_change from 2602 to 3100 over FY1940</REASONING>
+  <FINAL_ANSWER>19.14%</FINAL_ANSWER>
+
+The <FINAL_ANSWER>...</FINAL_ANSWER> block is MANDATORY — the judge extracts
+the answer from it via fuzzy match. Put ONLY the normalized value inside
+(no units prose, no trailing punctuation beyond what the format requires,
+no extra lines). The reasoning is for transparency and may be omitted only
+if you have nothing useful to say.
+
+Crucially, the content INSIDE <FINAL_ANSWER>...</FINAL_ANSWER> must strictly
+adhere to any output formatting instructions specified in the original
+question. Rely on the format you recorded in your todos.
 """
 
 
