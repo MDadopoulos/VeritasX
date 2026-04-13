@@ -70,9 +70,9 @@
 
   // A2A endpoint declaration
   provides: {
-    a2a_endpoint: { port: 9009 },
+    a2a: { port: 9009 },
   },
   exports: {
-    a2a_endpoint: "a2a_endpoint",
+    a2a: "a2a",
   },
 }
