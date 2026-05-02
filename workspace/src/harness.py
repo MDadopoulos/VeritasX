@@ -573,7 +573,7 @@ def create_harness_agent():
     class GeminiKeyRotateMiddleware(AgentMiddleware):
         """Rotate AI Studio API keys on timeout / 429 / 503.
 
-        Reads GOOGLE_API_KEY, GOOGLE_API_KEY_2, GOOGLE_API_KEY_3 from env.
+        Reads GOOGLE_API_KEY, GOOGLE_API_KEY_2..GOOGLE_API_KEY_5 from env.
         Each attempt uses `per_attempt_timeout` seconds; on transient failure
         the next key is used. Non-transient errors propagate immediately.
         """
@@ -586,6 +586,8 @@ def create_harness_agent():
                 os.environ.get("GOOGLE_API_KEY"),
                 os.environ.get("GOOGLE_API_KEY_2"),
                 os.environ.get("GOOGLE_API_KEY_3"),
+                os.environ.get("GOOGLE_API_KEY_4"),
+                os.environ.get("GOOGLE_API_KEY_5"),
             ]
             self.keys = [k for k in keys if k]
             if not self.keys:
@@ -669,7 +671,7 @@ def create_harness_agent():
     orch_model = get_model("gemini-3.1-pro-preview")
 
     # Shared AI Studio key-rotation middleware (used by orchestrator + all subagents).
-    # Triggers on timeout / 429 / 503 and rotates through GOOGLE_API_KEY[_2,_3].
+    # Triggers on timeout / 429 / 503 and rotates through GOOGLE_API_KEY[_2.._5].
     _subagent_model_id = os.environ.get("MODEL_ID", "gemini-3-flash-preview")
     _orch_model_id = os.environ.get("ORCH_MODEL_ID", "gemini-3.1-pro-preview")
     key_rotate_sub = GeminiKeyRotateMiddleware(model_id=_subagent_model_id)
